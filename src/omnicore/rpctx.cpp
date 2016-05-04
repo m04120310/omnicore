@@ -74,12 +74,15 @@ Value omni_send(const Array& params, bool fHelp)
 
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_SimpleSend(propertyId, amount);
-
+    printf("payload size: %d\n", payload.size());
+    printf("payload content: ");
+    for(int i=0; i<payload.size(); ++i)
+        printf("%x", payload[i]);
+    printf("\n");
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;
     std::string rawHex;
     int result = ClassAgnosticWalletTXBuilder(fromAddress, toAddress, redeemAddress, referenceAmount, payload, txid, rawHex, autoCommit);
-
     // check error and return the txid (or raw hex depending on autocommit)
     if (result != 0) {
         throw JSONRPCError(result, error_str(result));

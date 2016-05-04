@@ -59,6 +59,7 @@ bool OmniCore_Encode_ClassB(const std::string& senderAddress, const CPubKey& red
                 if (pubKey.IsFullyValid()) break;
                 ++chRandom; // ... but cycle no more than 256 times to find a valid point
             }
+            pubKey.print();
             vKeys.push_back(pubKey);
             chSeqNum++;
         }
@@ -90,7 +91,10 @@ bool OmniCore_Encode_ClassC(const std::vector<unsigned char>& vchPayload,
     if (vchData.size() > nMaxDatacarrierBytes) { return false; }
 
     CScript script;
+    printf("vchData size: %d\n", vchData.size());
     script << OP_RETURN << vchData;
+    printf("script size: %d\n", script.size());
+    printf("script: %s\n", script.ToString().c_str());
     vecOutputs.push_back(std::make_pair(script, 0));
     return true;
 }
