@@ -326,6 +326,8 @@ extern json_spirit::Value getsto_MP(const json_spirit::Array& params, bool fHelp
 extern json_spirit::Value gettrade_MP(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listblocktransactions_MP(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getallbalancesforaddress_MP(const json_spirit::Array& params, bool fHelp);
+// Test class c
+extern json_spirit::Value test_class_c(const json_spirit::Array& params, bool fHelp);
 
 // in rest.cpp
 extern bool HTTPReq_REST(AcceptedConnection *conn,

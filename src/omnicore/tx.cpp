@@ -37,6 +37,7 @@ using namespace mastercore;
 std::string mastercore::strTransactionType(uint16_t txType)
 {
     switch (txType) {
+        case GCOIN_TYPE_TEST_CLASS_C: return "Gcoin Test Class C";
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
         case MSC_TYPE_SEND_TO_OWNERS: return "Send To Owners";
@@ -100,6 +101,9 @@ bool CMPTransaction::interpret_Transaction()
     }
 
     switch (type) {
+        case GCOIN_TYPE_TEST_CLASS_C:
+            return interpret_test();
+
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
 
@@ -178,6 +182,31 @@ bool CMPTransaction::interpret_TransactionType()
         PrintToLog("\t         version: %d, class %s\n", txVersion, intToClass(encodingClass));
         PrintToLog("\t            type: %d (%s)\n", txType, strTransactionType(txType));
     }
+
+    printf("\t------------------------------\n");
+    printf("\t         version: %d, class %s\n", txVersion, intToClass(encodingClass).c_str());
+    printf("\t            type: %d (%s)\n", txType, strTransactionType(txType).c_str());
+    return true;
+}
+
+/** Tx 101 and 102*/
+bool CMPTransaction::interpret_test()
+{
+    uint16_t txVersion = 0;
+    uint16_t txType = 0;
+    memcpy(&txVersion, &pkt[0], 2);
+    swapByteOrder16(txVersion);
+    memcpy(&txType, &pkt[2], 2);
+    swapByteOrder16(txType);
+    version = txVersion;
+    type = txType;
+
+    char* p = 4 + (char*) &pkt;
+    std::string data(p);
+    memset(test_data, 0, sizeof(test_data));
+    printf("data length: %d, data: %s\n", data.length(), data.c_str());
+    memcpy(test_data, data.c_str(), data.length());
+    printf("test data:%s\n", test_data);
 
     return true;
 }

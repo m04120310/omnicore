@@ -466,6 +466,7 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "sendtoowners_MP",                 &omni_sendsto,                    false,      true,       true },
     { "hidden",                              "trade_MP",                        &trade_MP,                        false,      true,       true }, // depreciated - to be removed? we haven't released with this call
 #endif
+    { "hidden",                              "test_class_c",                    &test_class_c,                    false,      true,       false },
 };
 
 CRPCTable::CRPCTable()
@@ -1064,6 +1065,7 @@ static bool HTTPReq_JSONRPC(AcceptedConnection *conn,
 
 void ServiceConnection(AcceptedConnection *conn)
 {
+    printf("ServiceConnection\n");
     bool fRun = true;
     while (fRun && !ShutdownRequested())
     {
@@ -1102,6 +1104,7 @@ void ServiceConnection(AcceptedConnection *conn)
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
 {
     // Find method
+    printf("strMehtod: %s\n", strMethod.c_str());
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");

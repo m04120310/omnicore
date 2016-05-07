@@ -82,9 +82,7 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_tomni.name = "Test Omni";
     implied_tomni.url = "http://www.omnilayer.org";
     implied_tomni.data = "Test Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
-    printf("before init\n");
     init();
-    printf("finish init\n");
 }
 
 CMPSPInfo::~CMPSPInfo()
@@ -427,13 +425,6 @@ bool CMPSPInfo::getWatermark(uint256& watermark) const
         }
         return false;
     }
-    /*
-    printf("strValue: ");
-    for(int i = 0; i < strValue.size(); i++) {
-        printf("%x", strValue.c_str()[i]);
-    }
-    */
-    printf("\n");
     try {
         CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
         ssValue >> watermark;
