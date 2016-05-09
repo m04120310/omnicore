@@ -60,6 +60,8 @@ int populateRPCTransactionObject(const CTransaction& tx, const uint256& blockHas
 {
     int confirmations = 0;
     int64_t blockTime = 0;
+    int positionInBlock = 0;
+
     if (blockHeight == 0) {
         blockHeight = GetHeight();
     }
@@ -116,6 +118,7 @@ int populateRPCTransactionObject(const CTransaction& tx, const uint256& blockHas
     if (confirmations > 0) {
         LOCK(cs_tally);
         valid = getValidMPTX(txid);
+        positionInBlock = p_OmniTXDB->FetchTransactionPosition(txid);
     }
 
     // populate some initial info for the transaction
@@ -140,6 +143,7 @@ int populateRPCTransactionObject(const CTransaction& tx, const uint256& blockHas
         txobj.push_back(Pair("valid", valid));
         txobj.push_back(Pair("blockhash", blockHash.GetHex()));
         txobj.push_back(Pair("blocktime", blockTime));
+        txobj.push_back(Pair("positioninblock", positionInBlock));
     }
     if (confirmations != 0) {
         txobj.push_back(Pair("block", blockHeight));
@@ -326,7 +330,6 @@ void populateRPCTypeMetaDExTrade(CMPTransaction& omniObj, Object& txobj, bool ex
 {
     CMPMetaDEx metaObj(omniObj);
 
-    // unit price display adjustment based on divisibility and always showing prices in MSC/TMSC
     bool propertyIdForSaleIsDivisible = isPropertyDivisible(omniObj.getProperty());
     bool propertyIdDesiredIsDivisible = isPropertyDivisible(metaObj.getDesProperty());
     std::string unitPriceStr = metaObj.displayFullUnitPrice();
@@ -346,7 +349,6 @@ void populateRPCTypeMetaDExCancelPrice(CMPTransaction& omniObj, Object& txobj, b
 {
     CMPMetaDEx metaObj(omniObj);
 
-    // unit price display adjustment based on divisibility and always showing prices in MSC/TMSC
     bool propertyIdForSaleIsDivisible = isPropertyDivisible(omniObj.getProperty());
     bool propertyIdDesiredIsDivisible = isPropertyDivisible(metaObj.getDesProperty());
     std::string unitPriceStr = metaObj.displayFullUnitPrice();

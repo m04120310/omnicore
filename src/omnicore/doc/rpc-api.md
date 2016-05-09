@@ -652,6 +652,7 @@ Get detailed information about an Omni transaction.
   "fee" : "n.nnnnnnnn",            // (string) the transaction fee in bitcoins
   "blocktime" : nnnnnnnnnn,        // (number) the timestamp of the block that contains the transaction
   "valid" : true|false,            // (boolean) whether the transaction is valid
+  "positioninblock" : n,           // (number) the position (index) of the transaction within the block
   "version" : n,                   // (number) the transaction version
   "type_int" : n,                  // (number) the transaction type as number
   "type" : "type",                 // (string) the transaction type as string
@@ -693,6 +694,7 @@ List wallet transactions, optionally filtered by an address and block boundaries
     "fee" : "n.nnnnnnnn",            // (string) the transaction fee in bitcoins
     "blocktime" : nnnnnnnnnn,        // (number) the timestamp of the block that contains the transaction
     "valid" : true|false,            // (boolean) whether the transaction is valid
+    "positioninblock" : n,           // (number) the position (index) of the transaction within the block
     "version" : n,                   // (number) the transaction version
     "type_int" : n,                  // (number) the transaction type as number
     "type" : "type",                 // (string) the transaction type as string
@@ -1037,6 +1039,7 @@ Get information and recipients of a send-to-owners transaction.
   "fee" : "n.nnnnnnnn",          // (string) the transaction fee in bitcoins
   "blocktime" : nnnnnnnnnn,      // (number) the timestamp of the block that contains the transaction
   "valid" : true|false,          // (boolean) whether the transaction is valid
+  "positioninblock" : n,         // (number) the position (index) of the transaction within the block
   "version" : n,                 // (number) the transaction version
   "type_int" : n,                // (number) the transaction type as number
   "type" : "type",               // (string) the transaction type as string
@@ -1082,6 +1085,7 @@ Get detailed information and trade matches for orders on the distributed token e
   "fee" : "n.nnnnnnnn",                         // (string) the transaction fee in bitcoins
   "blocktime" : nnnnnnnnnn,                     // (number) the timestamp of the block that contains the transaction
   "valid" : true|false,                         // (boolean) whether the transaction is valid
+  "positioninblock" : n,                        // (number) the position (index) of the transaction within the block
   "version" : n,                                // (number) the transaction version
   "type_int" : n,                               // (number) the transaction type as number
   "type" : "type",                              // (string) the transaction type as string
@@ -1091,7 +1095,7 @@ Get detailed information and trade matches for orders on the distributed token e
   "propertyiddesired" : n,                      // (number) the identifier of the tokens desired in exchange
   "propertyiddesiredisdivisible" : true|false,  // (boolean) whether the desired tokens are divisible
   "amountdesired" : "n.nnnnnnnn",               // (string) the amount of tokens initially desired
-  "unitprice" : "n.nnnnnnnnnnn..."              // (string) the unit price nominated in OMNI or TOMNI
+  "unitprice" : "n.nnnnnnnnnnn..."              // (string) the unit price (shown in the property desired)
   "status" : "status"                           // (string) the status of the order ("open", "cancelled", "filled", ...)
   "canceltxid" : "hash",                        // (string) the hash of the transaction that cancelled the order (if cancelled)
   "matches": [                                  // (array of JSON objects) a list of matched orders and executed trades
@@ -1218,6 +1222,7 @@ Retrieves the history of orders on the distributed exchange for the supplied add
     "fee" : "n.nnnnnnnn",                         // (string) the transaction fee in bitcoins
     "blocktime" : nnnnnnnnnn,                     // (number) the timestamp of the block that contains the transaction
     "valid" : true|false,                         // (boolean) whether the transaction is valid
+    "positioninblock" : n,                        // (number) the position (index) of the transaction within the block
     "version" : n,                                // (number) the transaction version
     "type_int" : n,                               // (number) the transaction type as number
     "type" : "type",                              // (string) the transaction type as string
@@ -1227,7 +1232,7 @@ Retrieves the history of orders on the distributed exchange for the supplied add
     "propertyiddesired" : n,                      // (number) the identifier of the tokens desired in exchange
     "propertyiddesiredisdivisible" : true|false,  // (boolean) whether the desired tokens are divisible
     "amountdesired" : "n.nnnnnnnn",               // (string) the amount of tokens initially desired
-    "unitprice" : "n.nnnnnnnnnnn..."              // (string) the unit price nominated in OMNI or TOMNI
+    "unitprice" : "n.nnnnnnnnnnn..."              // (string) the unit price (shown in the property desired)
     "status" : "status"                           // (string) the status of the order ("open", "cancelled", "filled", ...)
     "canceltxid" : "hash",                        // (string) the hash of the transaction that cancelled the order (if cancelled)
     "matches": [                                  // (array of JSON objects) a list of matched orders and executed trades

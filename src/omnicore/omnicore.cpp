@@ -102,8 +102,8 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "mpexoDuSkGGqvqrkrjiFng38QPkJQVFyqv";
-static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
+static const string exodus_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
+static const string getmoney_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
 
 static int nWaterlineBlock = 0;
 
@@ -134,6 +134,7 @@ static int reorgRecoveryMaxHeight = 0;
 CMPTxList *mastercore::p_txlistdb;
 CMPTradeList *mastercore::t_tradelistdb;
 CMPSTOList *mastercore::s_stolistdb;
+COmniTransactionDB *mastercore::p_OmniTXDB;
 
 // indicate whether persistence is enabled at this point, or not
 // used to write/read files, for breakout mode, debugging, etc.
@@ -2042,6 +2043,7 @@ void clear_all_state()
     p_txlistdb->Clear();
     s_stolistdb->Clear();
     t_tradelistdb->Clear();
+    p_OmniTXDB->Clear();
     assert(p_txlistdb->setDBVersion() == DB_VERSION); // new set of databases, set DB version
     exodus_prev = 0;
 }
@@ -2090,11 +2092,13 @@ int mastercore_init()
             boost::filesystem::path tradePath = GetDataDir() / "MP_tradelist";
             boost::filesystem::path spPath = GetDataDir() / "MP_spinfo";
             boost::filesystem::path stoPath = GetDataDir() / "MP_stolist";
+            boost::filesystem::path omniTXDBPath = GetDataDir() / "Omni_TXDB";
             if (boost::filesystem::exists(persistPath)) boost::filesystem::remove_all(persistPath);
             if (boost::filesystem::exists(txlistPath)) boost::filesystem::remove_all(txlistPath);
             if (boost::filesystem::exists(tradePath)) boost::filesystem::remove_all(tradePath);
             if (boost::filesystem::exists(spPath)) boost::filesystem::remove_all(spPath);
             if (boost::filesystem::exists(stoPath)) boost::filesystem::remove_all(stoPath);
+            if (boost::filesystem::exists(omniTXDBPath)) boost::filesystem::remove_all(omniTXDBPath);
             PrintToLog("Success clearing persistence files in datadir %s\n", GetDataDir().string());
             startClean = true;
         } catch (const boost::filesystem::filesystem_error& e) {
@@ -2107,6 +2111,7 @@ int mastercore_init()
     s_stolistdb = new CMPSTOList(GetDataDir() / "MP_stolist", fReindex);
     p_txlistdb = new CMPTxList(GetDataDir() / "MP_txlist", fReindex);
     _my_sps = new CMPSPInfo(GetDataDir() / "MP_spinfo", fReindex);
+    p_OmniTXDB = new COmniTransactionDB(GetDataDir() / "Omni_TXDB", fReindex);
 
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);
@@ -2204,6 +2209,10 @@ int mastercore_shutdown()
         delete _my_sps;
         _my_sps = NULL;
     }
+    if (p_OmniTXDB) {
+        delete p_OmniTXDB;
+        p_OmniTXDB = NULL;
+    }
 
     PrintToLog("\nOmni Core shutdown completed\n");
     PrintToLog("Shutdown time: %s\n", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", GetTime()));
@@ -2265,6 +2274,7 @@ bool mastercore_handler_tx(const CTransaction& tx, int nBlock, unsigned int idx,
         if (interp_ret != PKT_ERROR - 2) {
             bool bValid = (0 <= interp_ret);
             p_txlistdb->recordTX(tx.GetHash(), bValid, nBlock, mp_obj.getType(), mp_obj.getNewAmount());
+            p_OmniTXDB->RecordTransaction(tx.GetHash(), idx);
         }
         fFoundTx |= (interp_ret == 0);
     }
@@ -2363,6 +2373,33 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
 #else
     return MP_ERR_WALLET_ACCESS;
 #endif
+}
+
+void COmniTransactionDB::RecordTransaction(const uint256& txid, uint32_t posInBlock)
+{
+    assert(pdb);
+
+    const std::string key = txid.ToString();
+    const std::string value = strprintf("%d", posInBlock);
+
+    Status status = pdb->Put(writeoptions, key, value);
+    ++nWritten;
+}
+
+uint32_t COmniTransactionDB::FetchTransactionPosition(const uint256& txid)
+{
+    assert(pdb);
+
+    const std::string key = txid.ToString();
+    std::string strValue;
+    uint32_t posInBlock = 999999; // setting an initial arbitrarily high value will ensure transaction is always "last" in event of bug/exploit
+
+    Status status = pdb->Get(readoptions, key, &strValue);
+    if (status.ok()) {
+        posInBlock = boost::lexical_cast<uint32_t>(strValue);
+    }
+
+    return posInBlock;
 }
 
 std::set<int> CMPTxList::GetSeedBlocks(int startHeight, int endHeight)
@@ -3159,11 +3196,9 @@ void CMPSTOList::printStats()
 }
 
 /**
- * This function deletes records of STO receivers above a specific block from the STO database.
+ * This function deletes records of STO receivers above/equal to a specific block from the STO database.
  *
  * Returns the number of records changed.
- *
- * NOTE: The blockNum parameter is inclusive, so deleteAboveBlock(1000) will delete records in block 1000 and above.
  */
 int CMPSTOList::deleteAboveBlock(int blockNum)
 {
@@ -3179,7 +3214,7 @@ int CMPSTOList::deleteAboveBlock(int blockNum)
           std::vector<std::string> vecSTORecordFields;
           boost::split(vecSTORecordFields, vecSTORecords[i], boost::is_any_of(":"), boost::token_compress_on);
           if (4 != vecSTORecordFields.size()) continue;
-          if (atoi(vecSTORecordFields[1]) <= blockNum) {
+          if (atoi(vecSTORecordFields[1]) < blockNum) {
               newValue += vecSTORecords[i].append(","); // STO before the reorg, add data back to new value string
           } else {
               needsUpdate = true;
@@ -3418,7 +3453,11 @@ void CMPTradeList::recordMatchedTrade(const uint256 txid1, const uint256 txid2, 
   }
 }
 
-// delete any trades after blockNum
+/**
+ * This function deletes records of trades above/equal to a specific block from the trade database.
+ *
+ * Returns the number of records changed.
+ */
 int CMPTradeList::deleteAboveBlock(int blockNum)
 {
   leveldb::Slice skey, svalue;
@@ -3553,9 +3592,10 @@ int mastercore_handler_block_begin(int nBlockPrev, CBlockIndex const * pBlockInd
     if (reorgRecoveryMode > 0) {
         reorgRecoveryMode = 0; // clear reorgRecovery here as this is likely re-entrant
 
-        p_txlistdb->isMPinBlockRange(pBlockIndex->nHeight, reorgRecoveryMaxHeight, true); // inclusive
-        t_tradelistdb->deleteAboveBlock(pBlockIndex->nHeight - 1); // deleteAboveBlock functions are non-inclusive (>blocknum not >=blocknum)
-        s_stolistdb->deleteAboveBlock(pBlockIndex->nHeight - 1);
+        // NOTE: The blockNum parameter is inclusive, so deleteAboveBlock(1000) will delete records in block 1000 and above.
+        p_txlistdb->isMPinBlockRange(pBlockIndex->nHeight, reorgRecoveryMaxHeight, true);
+        t_tradelistdb->deleteAboveBlock(pBlockIndex->nHeight);
+        s_stolistdb->deleteAboveBlock(pBlockIndex->nHeight);
         reorgRecoveryMaxHeight = 0;
 
         nWaterlineBlock = ConsensusParams().GENESIS_BLOCK - 1;
@@ -3718,7 +3758,6 @@ const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock)
  */
 const std::vector<unsigned char> GetOmMarker()
 {
-    static unsigned char pch[] = {0x6f, 0x6d, 0x6e, 0x69}; // Hex-encoded: "omni"
-
+    static unsigned char pch[] = {0x67, 0x63, 0x6f, 0x69, 0x6e}; // Hex-encoded: "gcoin"
     return std::vector<unsigned char>(pch, pch + sizeof(pch) / sizeof(pch[0]));
 }
