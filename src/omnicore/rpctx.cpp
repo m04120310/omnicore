@@ -34,6 +34,51 @@ using std::runtime_error;
 using namespace json_spirit;
 using namespace mastercore;
 
+// test class b rpc
+Value test_class_b(const Array& params, bool fHelp) {
+    if (fHelp || params.size() < 2 || params.size() >3)
+        throw runtime_error("test class b rpc argument error");
+    std::string fromAddress = ParseAddress(params[0]);
+    std::string toAddress = ParseAddress(params[1]);
+    std::string data;
+    char tmp[100] = {0};
+    // generate a string longer than 80 byte.
+    for(int i=0; i < (73 - ParseText(params[2]).length()); i++) {
+        tmp[i] = (i % 26) + 97;
+    }
+
+    if (params.size() == 3) {
+        data = ParseText(params[2]);
+        data.append(". ");
+        data.append(std::string(tmp));
+    } else {
+        data.assign(tmp);
+    }
+    printf("data: %s\n", data.c_str());
+    std::string redeemAddress = "";
+    int64_t referenceAmount = 0;
+
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_Test_B(data);
+    printf("payload size: %d\n", payload.size());
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, toAddress, redeemAddress, referenceAmount, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            // PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, amount);
+            return txid.GetHex();
+        }
+    }
+}
+
 // test class c rpc
 Value test_class_c(const Array& params, bool fHelp) {
     if (fHelp || params.size() < 2 || params.size() >3)
@@ -51,7 +96,7 @@ Value test_class_c(const Array& params, bool fHelp) {
     int64_t referenceAmount = 0;
 
     // create a payload for the transaction
-    std::vector<unsigned char> payload = CreatePayload_Test(data);
+    std::vector<unsigned char> payload = CreatePayload_Test_C(data);
 
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;

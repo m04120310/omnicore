@@ -213,6 +213,11 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "omni_createpayload_canceltradesbypair", 0 },
     { "omni_createpayload_canceltradesbypair", 1 },
     { "omni_createpayload_cancelalltrades", 0 },
+
+    /* Gcoin test tx */
+    { "test_class_b", 3 },
+    { "test_class_c", 3 },
+    { "test_multisig_tx", 15},
 };
 
 class CRPCConvertTable

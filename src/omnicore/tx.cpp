@@ -37,6 +37,7 @@ using namespace mastercore;
 std::string mastercore::strTransactionType(uint16_t txType)
 {
     switch (txType) {
+        case GCOIN_TYPE_TEST_CLASS_B: return "Gcoin Test Class B";
         case GCOIN_TYPE_TEST_CLASS_C: return "Gcoin Test Class C";
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
@@ -102,7 +103,10 @@ bool CMPTransaction::interpret_Transaction()
 
     switch (type) {
         case GCOIN_TYPE_TEST_CLASS_C:
-            return interpret_test();
+            return interpret_Test();
+
+        case GCOIN_TYPE_TEST_CLASS_B:
+            return interpret_Test();
 
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
@@ -189,27 +193,6 @@ bool CMPTransaction::interpret_TransactionType()
     return true;
 }
 
-/** Tx 101 and 102*/
-bool CMPTransaction::interpret_test()
-{
-    uint16_t txVersion = 0;
-    uint16_t txType = 0;
-    memcpy(&txVersion, &pkt[0], 2);
-    swapByteOrder16(txVersion);
-    memcpy(&txType, &pkt[2], 2);
-    swapByteOrder16(txType);
-    version = txVersion;
-    type = txType;
-
-    char* p = 4 + (char*) &pkt;
-    std::string data(p);
-    memset(test_data, 0, sizeof(test_data));
-    printf("data length: %d, data: %s\n", data.length(), data.c_str());
-    memcpy(test_data, data.c_str(), data.length());
-    printf("test data:%s\n", test_data);
-
-    return true;
-}
 
 /** Tx 1 */
 bool CMPTransaction::interpret_SimpleSend()
@@ -644,6 +627,28 @@ bool CMPTransaction::interpret_ChangeIssuer()
     if ((!rpcOnly && msc_debug_packets) || msc_debug_packets_readonly) {
         PrintToLog("\t        property: %d (%s)\n", property, strMPProperty(property));
     }
+
+    return true;
+}
+
+/** Tx 101 and 102*/
+bool CMPTransaction::interpret_Test()
+{
+    uint16_t txVersion = 0;
+    uint16_t txType = 0;
+    memcpy(&txVersion, &pkt[0], 2);
+    swapByteOrder16(txVersion);
+    memcpy(&txType, &pkt[2], 2);
+    swapByteOrder16(txType);
+    version = txVersion;
+    type = txType;
+
+    char* p = 4 + (char*) &pkt;
+    std::string data(p);
+    memset(test_data, 0, sizeof(test_data));
+    printf("data length: %d, data: %s\n", data.length(), data.c_str());
+    memcpy(test_data, data.c_str(), data.length());
+    printf("test data: %s\n", test_data);
 
     return true;
 }

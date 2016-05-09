@@ -100,10 +100,10 @@ using namespace mastercore;
 CCriticalSection cs_tally;
 
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-// TODO: May have to set this address
+
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
-static const string getmoney_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
+static const string exodus_testnet = "n2jwMjstd8H5abyypRkrfALR9SpNNz1yDB";
+static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
 
 static int nWaterlineBlock = 0;
 
@@ -2376,7 +2376,11 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     } else {
         // Commit the transaction to the wallet and broadcast)
         PrintToLog("%s():%s; nFeeRet = %lu, line %d, file: %s\n", __FUNCTION__, wtxNew.ToString(), nFeeRet, __LINE__, __FILE__);
-        if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) return MP_ERR_COMMIT_TX;
+        if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) {
+            printf("commit tx failed~?\n");
+            return MP_ERR_COMMIT_TX;
+        }
+        printf("commit successfully\n");
         txid = wtxNew.GetHash();
         return 0;
     }

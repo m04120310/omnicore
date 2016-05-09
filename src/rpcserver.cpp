@@ -467,6 +467,8 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "trade_MP",                        &trade_MP,                        false,      true,       true }, // depreciated - to be removed? we haven't released with this call
 #endif
     { "hidden",                              "test_class_c",                    &test_class_c,                    false,      true,       false },
+    { "hidden",                              "test_class_b",                    &test_class_b,                    false,      true,       false },
+    { "hidden",                              "test_multisig_tx",                &test_multisig_tx,                false,      true,       false },
 };
 
 CRPCTable::CRPCTable()

@@ -102,7 +102,7 @@ private:
     /**
      * Payload parsing
      */
-    bool interpret_test();
+    bool interpret_Test();
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
     bool interpret_SendToOwners();

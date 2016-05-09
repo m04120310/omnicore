@@ -53,23 +53,27 @@ bool OmniCore_Encode_ClassB(const std::string& senderAddress, const CPubKey& red
             vchFakeKey.resize(33);
             CPubKey pubKey;
             unsigned char chRandom = static_cast<unsigned char>(GetRand(256));
-            for (int j = 0; i < 256 ; j++) { // Fix ECDSA coodinate
+            for (int j = 0; j < 256 ; j++) { // Fix ECDSA coodinate
                 vchFakeKey[32] = chRandom;
                 pubKey = CPubKey(vchFakeKey);
-                if (pubKey.IsFullyValid()) break;
+                if (pubKey.IsFullyValid()) {
+                    break;
+                }
                 ++chRandom; // ... but cycle no more than 256 times to find a valid point
             }
-            pubKey.print();
+            // pubKey.print();
             vKeys.push_back(pubKey);
             chSeqNum++;
         }
 
         // Push back a bare multisig output with obfuscated data
         CScript scriptMultisigOut = GetScriptForMultisig(1, vKeys);
+        printf("script: %s\n", scriptMultisigOut.ToString().c_str());
         vecOutputs.push_back(std::make_pair(scriptMultisigOut, GetDustThreshold(scriptMultisigOut)));
     }
 
     // Add the Exodus marker output
+    printf("ExodusAddress(): %s\n", ExodusAddress().ToString().c_str());
     CScript scriptExodusOutput = GetScriptForDestination(ExodusAddress().Get());
     vecOutputs.push_back(std::make_pair(scriptExodusOutput, GetDustThreshold(scriptExodusOutput)));
     return true;
