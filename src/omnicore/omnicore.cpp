@@ -102,8 +102,8 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "mpexoDuSkGGqvqrkrjiFng38QPkJQVFyqv";
-static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
+static const string exodus_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
+static const string getmoney_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
 
 static int nWaterlineBlock = 0;
 
@@ -3758,7 +3758,6 @@ const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock)
  */
 const std::vector<unsigned char> GetOmMarker()
 {
-    static unsigned char pch[] = {0x6f, 0x6d, 0x6e, 0x69}; // Hex-encoded: "omni"
-
+    static unsigned char pch[] = {0x67, 0x63, 0x6f, 0x69, 0x6e}; // Hex-encoded: "gcoin"
     return std::vector<unsigned char>(pch, pch + sizeof(pch) / sizeof(pch[0]));
 }
