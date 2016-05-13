@@ -102,8 +102,8 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "mpexoDuSkGGqvqrkrjiFng38QPkJQVFyqv";
-static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
+static const string exodus_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
+static const string getmoney_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
 
 static int nWaterlineBlock = 0;
 
@@ -587,7 +587,7 @@ int mastercore::GetEncodingClass(const CTransaction& tx, int nBlock)
                 continue;
             }
             if (!scriptPushes.empty()) {
-                std::vector<unsigned char> vchMarker = GetOmMarker();
+                std::vector<unsigned char> vchMarker = GetGcoinMarker();
                 std::vector<unsigned char> vchPushed = ParseHex(scriptPushes[0]);
                 if (vchPushed.size() < vchMarker.size()) {
                     continue;
@@ -1042,7 +1042,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
                     }
                     // TODO: maybe encapsulate the following sort of messy code
                     if (!vstrPushes.empty()) {
-                        std::vector<unsigned char> vchMarker = GetOmMarker();
+                        std::vector<unsigned char> vchMarker = GetGcoinMarker();
                         std::vector<unsigned char> vchPushed = ParseHex(vstrPushes[0]);
                         if (vchPushed.size() < vchMarker.size()) {
                             continue;
@@ -2295,7 +2295,7 @@ bool mastercore_handler_tx(const CTransaction& tx, int nBlock, unsigned int idx,
  */
 bool mastercore::UseEncodingClassC(size_t nDataSize)
 {
-    size_t nTotalSize = nDataSize + GetOmMarker().size(); // Marker "omni"
+    size_t nTotalSize = nDataSize + GetGcoinMarker().size(); // Marker "omni"
     bool fDataEnabled = GetBoolArg("-datacarrier", true);
     int nBlockNow = GetHeight();
     if (!IsAllowedOutputType(TX_NULL_DATA, nBlockNow)) {
@@ -3756,9 +3756,8 @@ const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock)
 /**
  * @return The marker for class C transactions.
  */
-const std::vector<unsigned char> GetOmMarker()
+const std::vector<unsigned char> GetGcoinMarker()
 {
-    static unsigned char pch[] = {0x6f, 0x6d, 0x6e, 0x69}; // Hex-encoded: "omni"
-
+    static unsigned char pch[] = {0x67, 0x63, 0x6f, 0x69, 0x6e}; // Hex-encoded: "gcoin"
     return std::vector<unsigned char>(pch, pch + sizeof(pch) / sizeof(pch[0]));
 }

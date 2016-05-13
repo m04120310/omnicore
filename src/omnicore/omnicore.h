@@ -144,7 +144,7 @@ const CBitcoinAddress ExodusAddress();
 const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock = 0);
 
 /** Returns the marker for class C transactions. */
-const std::vector<unsigned char> GetOmMarker();
+const std::vector<unsigned char> GetGcoinMarker();
 
 //! Used to indicate, whether to automatically commit created transactions
 extern bool autoCommit;
