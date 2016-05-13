@@ -3756,7 +3756,7 @@ const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock)
 /**
  * @return The marker for class C transactions.
  */
-const std::vector<unsigned char> GetOmMarker()
+const std::vector<unsigned char> GetGcoinMarker()
 {
     static unsigned char pch[] = {0x67, 0x63, 0x6f, 0x69, 0x6e}; // Hex-encoded: "gcoin"
     return std::vector<unsigned char>(pch, pch + sizeof(pch) / sizeof(pch[0]));
