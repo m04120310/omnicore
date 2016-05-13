@@ -587,7 +587,7 @@ int mastercore::GetEncodingClass(const CTransaction& tx, int nBlock)
                 continue;
             }
             if (!scriptPushes.empty()) {
-                std::vector<unsigned char> vchMarker = GetOmMarker();
+                std::vector<unsigned char> vchMarker = GetGcoinMarker();
                 std::vector<unsigned char> vchPushed = ParseHex(scriptPushes[0]);
                 if (vchPushed.size() < vchMarker.size()) {
                     continue;
@@ -1042,7 +1042,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
                     }
                     // TODO: maybe encapsulate the following sort of messy code
                     if (!vstrPushes.empty()) {
-                        std::vector<unsigned char> vchMarker = GetOmMarker();
+                        std::vector<unsigned char> vchMarker = GetGcoinMarker();
                         std::vector<unsigned char> vchPushed = ParseHex(vstrPushes[0]);
                         if (vchPushed.size() < vchMarker.size()) {
                             continue;
@@ -2295,7 +2295,7 @@ bool mastercore_handler_tx(const CTransaction& tx, int nBlock, unsigned int idx,
  */
 bool mastercore::UseEncodingClassC(size_t nDataSize)
 {
-    size_t nTotalSize = nDataSize + GetOmMarker().size(); // Marker "omni"
+    size_t nTotalSize = nDataSize + GetGcoinMarker().size(); // Marker "omni"
     bool fDataEnabled = GetBoolArg("-datacarrier", true);
     int nBlockNow = GetHeight();
     if (!IsAllowedOutputType(TX_NULL_DATA, nBlockNow)) {
