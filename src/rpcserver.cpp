@@ -469,6 +469,7 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "test_class_c",                    &test_class_c,                    false,      true,       false },
     { "hidden",                              "test_class_b",                    &test_class_b,                    false,      true,       false },
     { "hidden",                              "test_multisig_tx",                &test_multisig_tx,                false,      true,       false },
+    { "hidden",                              "gcoin_vote_for_license",          &gcoin_vote_for_license,          false,      true,       false },
 };
 
 CRPCTable::CRPCTable()

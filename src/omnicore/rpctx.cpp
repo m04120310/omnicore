@@ -116,6 +116,41 @@ Value test_class_c(const Array& params, bool fHelp) {
     }
 }
 
+// vote for license tx
+Value gcoin_vote_for_license(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 3)
+        throw runtime_error("vote for license tx argument error.\n"
+                             "params[0]: from address.\n"
+                             "params[1]: property id.\n"
+                             "params[2]: approve/reject\n");
+    std::string fromAddress = ParseAddress(params[0]);
+    uint32_t propertyId = ParsePropertyId(atoi(params[1].get_str()));
+    std::string voteType = params[2].get_str();
+    if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
+        throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
+    }
+    printf("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_VoteForLicense(propertyId, voteType);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            // PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, amount);
+            return txid.GetHex();
+        }
+    }
+}
+
 // omni_send - simple send
 Value omni_send(const Array& params, bool fHelp)
 {

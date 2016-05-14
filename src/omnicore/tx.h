@@ -72,6 +72,9 @@ private:
     // Gcoin Test usage
     char test_data[SP_STRING_FIELD_LEN];
 
+    // Gcoin vote system usage
+    char voteType[10];
+
     // MetaDEx
     unsigned int desired_property;
     uint64_t desired_value;
@@ -102,7 +105,10 @@ private:
     /**
      * Payload parsing
      */
+    /* Gcoin usage */
     bool interpret_Test();
+    bool interpret_VoteForLicense();
+
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
     bool interpret_SendToOwners();
@@ -126,6 +132,9 @@ private:
     /**
      * Logic and "effects"
      */
+    // Gcoin usage
+    int logicMath_VoteForLicense();
+
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();
     int logicMath_SendAll();
