@@ -102,7 +102,7 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "n2jwMjstd8H5abyypRkrfALR9SpNNz1yDB";
+static const string exodus_testnet = "mkpobptP1mSS6uzDAUE7uh23Wgq4MvXbPN";
 static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
 
 static int nWaterlineBlock = 0;
