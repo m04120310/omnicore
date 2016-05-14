@@ -1462,6 +1462,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
 
                     CTxOut newTxOut(nChange, scriptChange);
 
+                    printf("nFeeRet: %d\n", nFeeRet);
                     // Never create dust outputs; if we would, just
                     // add the dust to the fee.
                     if (newTxOut.IsDust(::minRelayTxFee))

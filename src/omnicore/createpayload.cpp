@@ -6,6 +6,7 @@
 
 #include "tinyformat.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -24,6 +25,35 @@
     vector.insert(vector.end(), reinterpret_cast<unsigned char *>((ptr)),\
     reinterpret_cast<unsigned char *>((ptr)) + (size));
 
+std::vector<unsigned char> CreatePayload_Test_C(std::string data)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 101;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_Test_B(std::string data)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 102;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+    return payload;
+}
 
 std::vector<unsigned char> CreatePayload_SimpleSend(uint32_t propertyId, uint64_t amount)
 {

@@ -69,6 +69,9 @@ private:
     unsigned char early_bird;
     unsigned char percentage;
 
+    // Gcoin Test usage
+    char test_data[SP_STRING_FIELD_LEN];
+
     // MetaDEx
     unsigned int desired_property;
     uint64_t desired_value;
@@ -99,6 +102,7 @@ private:
     /**
      * Payload parsing
      */
+    bool interpret_Test();
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
     bool interpret_SendToOwners();

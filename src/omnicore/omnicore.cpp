@@ -102,8 +102,8 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
-static const string getmoney_testnet = "19qMj8EMZ6PLfMqnFjqk1idCA9P3dNits3";
+static const string exodus_testnet = "mkpobptP1mSS6uzDAUE7uh23Wgq4MvXbPN";
+static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
 
 static int nWaterlineBlock = 0;
 
@@ -680,8 +680,11 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
 
     // ### CLASS IDENTIFICATION AND MARKER CHECK ###
     int omniClass = GetEncodingClass(wtx, nBlock);
-
-    if (omniClass == NO_MARKER) {
+    if (omniClass == OMNI_CLASS_C) {
+        printf("class c transaction found!\n");
+    } else if (omniClass == OMNI_CLASS_B) {
+        printf("class b transaction found!\n");
+    } else if (omniClass == NO_MARKER) {
         return -1; // No Exodus/Omni marker, thus not a valid Omni transaction
     }
 
@@ -773,7 +776,9 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
     int64_t txFee = inAll - outAll; // miner fee
 
     if (!strSender.empty()) {
-        if (msc_debug_verbose) PrintToLog("The Sender: %s : fee= %s\n", strSender, FormatDivisibleMP(txFee));
+        if (msc_debug_verbose)
+            PrintToLog("The Sender: %s : fee= %s\n", strSender, FormatDivisibleMP(txFee));
+        printf("The Sender: %s : fee= %s\n", strSender.c_str(), FormatDivisibleMP(txFee).c_str());
     } else {
         PrintToLog("The sender is still EMPTY !!! txid: %s\n", wtx.GetHash().GetHex());
         return -5;
@@ -896,6 +901,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
     }
     // ### CLASS B / CLASS C PARSING ###
     if ((omniClass == OMNI_CLASS_B) || (omniClass == OMNI_CLASS_C)) {
+        printf("Beginning reference identification\n");
         if (msc_debug_parser_data) PrintToLog("Beginning reference identification\n");
         bool referenceFound = false; // bool to hold whether we've found the reference yet
         bool changeRemoved = false; // bool to hold whether we've ignored the first output to sender as change
@@ -932,7 +938,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
             }
         }
         if (msc_debug_parser_data) PrintToLog("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference);
-
+        printf("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference.c_str());
         // ### CLASS B SPECIFC PARSING ###
         if (omniClass == OMNI_CLASS_B) {
             std::vector<std::string> multisig_script_data;
@@ -1084,7 +1090,9 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
     }
 
     // ### SET MP TX INFO ###
-    if (msc_debug_verbose) PrintToLog("single_pkt: %s\n", HexStr(single_pkt, packet_size + single_pkt));
+    if (msc_debug_verbose) {
+        PrintToLog("single_pkt: %s\n", HexStr(single_pkt, packet_size + single_pkt));
+    }
     mp_tx.Set(strSender, strReference, 0, wtx.GetHash(), nBlock, idx, (unsigned char *)&single_pkt, packet_size, omniClass, (inAll-outAll));
 
     // TODO: the following is a bit aweful
@@ -1331,7 +1339,6 @@ int input_msc_balances_string(const std::string& s)
     if (addrData.size() != 2) return -1;
 
     std::string strAddress = addrData[0];
-
     // split the tuples of properties
     std::vector<std::string> vProperties;
     boost::split(vProperties, addrData[1], boost::is_any_of(";"), boost::token_compress_on);
@@ -1341,7 +1348,6 @@ int input_msc_balances_string(const std::string& s)
         if ((*iter).empty()) {
             continue;
         }
-
         // "propertyid:balancedata"
         std::vector<std::string> curProperty;
         boost::split(curProperty, *iter, boost::is_any_of(":"), boost::token_compress_on);
@@ -1586,6 +1592,7 @@ static int msc_file_load(const string &filename, int what, bool verifyHash = fal
 
   std::ifstream file;
   file.open(filename.c_str());
+  printf("filename: %s\n", filename.c_str());
   if (!file.is_open())
   {
     if (msc_debug_persistence) LogPrintf("%s(%s): file not found, line %d, file: %s\n", __FUNCTION__, filename, __LINE__, __FILE__);
@@ -1640,6 +1647,7 @@ static int msc_file_load(const string &filename, int what, bool verifyHash = fal
     }
   }
 
+  // printf("%s(%s), loaded lines= %d, res= %d\n", __FUNCTION__, filename.c_str(), lines, res);
   PrintToLog("%s(%s), loaded lines= %d, res= %d\n", __FUNCTION__, filename, lines, res);
   LogPrintf("%s(): file: %s , loaded lines= %d, res= %d\n", __FUNCTION__, filename, lines, res);
 
@@ -1889,7 +1897,6 @@ static int write_state_file( CBlockIndex const *pBlockIndex, int what )
 {
   boost::filesystem::path path = MPPersistencePath / strprintf("%s-%s.dat", statePrefix[what], pBlockIndex->GetBlockHash().ToString());
   const std::string strFile = path.string();
-
   std::ofstream file;
   file.open(strFile.c_str());
 
@@ -2113,16 +2120,15 @@ int mastercore_init()
     _my_sps = new CMPSPInfo(GetDataDir() / "MP_spinfo", fReindex);
     p_OmniTXDB = new COmniTransactionDB(GetDataDir() / "Omni_TXDB", fReindex);
 
+    printf("After init _my_sps\n");
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);
 
     bool wrongDBVersion = (p_txlistdb->getDBVersion() != DB_VERSION);
 
     ++mastercoreInitialized;
-
     nWaterlineBlock = load_most_relevant_state();
     bool noPreviousState = (nWaterlineBlock <= 0);
-
     if (startClean) {
         assert(p_txlistdb->setDBVersion() == DB_VERSION); // new set of databases, set DB version
     } else if (wrongDBVersion) {
@@ -2172,6 +2178,7 @@ int mastercore_init()
     msc_initial_scan(nWaterlineBlock);
 
     // display Exodus balance
+    printf("exodus_balance: %s\n", exodus_address.c_str());
     int64_t exodus_balance = getMPbalance(exodus_address, OMNI_PROPERTY_MSC, BALANCE);
     PrintToLog("Exodus balance after initialization: %s\n", FormatDivisibleMP(exodus_balance));
 
@@ -2314,7 +2321,10 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     // Determine the class to send the transaction via - default is Class C
     int omniTxClass = OMNI_CLASS_C;
     if (!UseEncodingClassC(data.size())) omniTxClass = OMNI_CLASS_B;
-
+    if(omniTxClass==OMNI_CLASS_B)
+        printf("tx class: B\n");
+    else
+        printf("tx class: C\n");
     // Prepare the transaction - first setup some vars
     CCoinControl coinControl;
     txid = 0;
@@ -2366,7 +2376,11 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     } else {
         // Commit the transaction to the wallet and broadcast)
         PrintToLog("%s():%s; nFeeRet = %lu, line %d, file: %s\n", __FUNCTION__, wtxNew.ToString(), nFeeRet, __LINE__, __FILE__);
-        if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) return MP_ERR_COMMIT_TX;
+        if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) {
+            printf("commit tx failed~?\n");
+            return MP_ERR_COMMIT_TX;
+        }
+        printf("commit successfully\n");
         txid = wtxNew.GetHash();
         return 0;
     }
@@ -2441,8 +2455,11 @@ void CMPTxList::LoadActivations(int blockHeight)
         std::string itData = it->value().ToString();
         std::vector<std::string> vstr;
         boost::split(vstr, itData, boost::is_any_of(":"), token_compress_on);
-        if (4 != vstr.size()) continue; // unexpected number of tokens
-        if (atoi(vstr[2]) != OMNICORE_MESSAGE_TYPE_ACTIVATION || atoi(vstr[0]) != 1) continue; // we only care about valid activations
+        if (4 != vstr.size())
+            continue; // unexpected number of tokens
+        if (atoi(vstr[2]) != OMNICORE_MESSAGE_TYPE_ACTIVATION || atoi(vstr[0]) != 1) {
+            continue; // we only care about valid activations
+        }
         uint256 txid(it->key().ToString());;
         loadOrder.push_back(std::make_pair(atoi(vstr[1]), txid));
     }
@@ -3633,6 +3650,7 @@ int mastercore_handler_block_begin(int nBlockPrev, CBlockIndex const * pBlockInd
 int mastercore_handler_block_end(int nBlockNow, CBlockIndex const * pBlockIndex,
         unsigned int countMP)
 {
+    printf("Update new block. Block height: %d\n", nBlockNow);
     LOCK(cs_tally);
 
     if (!mastercoreInitialized) {

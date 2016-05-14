@@ -61,6 +61,7 @@ void CMPSPInfo::Entry::print() const
 
 CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
 {
+    printf("sp db path: %s\n", path.string().c_str());
     leveldb::Status status = Open(path, fWipe);
     PrintToConsole("Loading smart property database: %s\n", status.ToString());
 
@@ -81,7 +82,6 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_tomni.name = "Test Omni";
     implied_tomni.url = "http://www.omnilayer.org";
     implied_tomni.data = "Test Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
-
     init();
 }
 
@@ -100,6 +100,7 @@ void CMPSPInfo::Clear()
 
 void CMPSPInfo::init(uint32_t nextSPID, uint32_t nextTestSPID)
 {
+    printf("CMPSPInfo::init nextSPID:%d, nextTestSPID:%d\n", nextSPID, nextTestSPID);
     next_spid = nextSPID;
     next_test_spid = nextTestSPID;
 }
@@ -385,7 +386,6 @@ int64_t CMPSPInfo::popBlock(const uint256& block_hash)
         PrintToLog("%s(): ERROR: %s\n", __func__, status.ToString());
         return -4;
     }
-
     return remainingSPs;
 }
 
@@ -425,7 +425,6 @@ bool CMPSPInfo::getWatermark(uint256& watermark) const
         }
         return false;
     }
-
     try {
         CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
         ssValue >> watermark;
