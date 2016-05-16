@@ -205,12 +205,67 @@ public:
     void saveCrowdSale(std::ofstream& file, SHA256_CTX* shaCtx, const std::string& addr) const;
 };
 
+// Alliance DB
+
+class AllianceInfo : public CDBBase {
+public:
+    static const unsigned int ALLIANCE_INFO_STATUS_APPROVED = 0;
+    static const unsigned int ALLIANCE_INFO_STATUS_PENDING = 1;
+    static const unsigned int ALLIANCE_INFO_STATUS_REJECTED = 2;
+    struct Entry {
+        std::string address;
+        std::string name;
+        std::string url;
+        std::string data;
+
+        // other information
+        uint256 txid;
+        uint256 creation_block;
+        uint256 update_block;
+
+        // status
+        unsigned int status;
+
+        void print();
+    };
+
+private:
+    /* Default to be exodus address. */
+    Entry firstAlliance;
+
+public:
+    AllianceInfo(const boost::filesystem::path& path, bool fWipe) {
+        leveldb::Status status = Open(path, fWipe);
+        PrintToConsole("Loading alliance info database: %s\n", status.ToString());
+        init();
+    }
+
+    virtual ~AllianceInfo() {
+        if (msc_debug_persistence)
+            PrintToLog("Alliance info is closed\n");
+    }
+
+    void init();
+    void clear();
+    bool updateAllianceInfo(std::string address, const Entry& info);
+    bool putAllianceInfo(const Entry& info);
+    bool getAllianceInfo(std::string address, Entry& info);
+    bool hasAllianceInfo(std::string address) const;
+
+    void printAll() const;
+};
+/*
+unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED = 0;
+unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_PENDING = 1;
+unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_REJECTED = 2;
+*/
 namespace mastercore
 {
 typedef std::map<std::string, CMPCrowd> CrowdMap;
 
 extern CMPSPInfo* _my_sps;
 extern CrowdMap my_crowds;
+extern AllianceInfo* allianceInfoDB;
 
 std::string strPropertyType(uint16_t propertyType);
 std::string strEcosystem(uint8_t ecosystem);

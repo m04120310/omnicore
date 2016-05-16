@@ -561,6 +561,76 @@ CMPCrowd* mastercore::getCrowd(const std::string& address)
     return (CMPCrowd *)NULL;
 }
 
+// Alliance related
+
+void AllianceInfo::Entry::print() {
+    PrintToConsole("\n\taddress: %s\n\tname: %s\n\turl: %s\n\tdata: %s\n", address, name, url, data);
+    PrintToConsole("alliance status: ");
+    switch(status) {
+       case ALLIANCE_INFO_STATUS_APPROVED:
+           PrintToConsole("ALLIANCE_INFO_STATUS_APPROVED\n");
+           break;
+       case ALLIANCE_INFO_STATUS_PENDING:
+           PrintToConsole("ALLIANCE_INFO_STATUS_PENDING\n");
+           break;
+       case ALLIANCE_INFO_STATUS_REJECTED:
+           PrintToConsole("ALLIANCE_INFO_STATUS_REJECTED\n");
+           break;
+       default:
+           PrintToConsole("Invalid status.\n");
+       }
+}
+
+void AllianceInfo::clear() {
+    // wipe database via parent class
+    CDBBase::Clear();
+    // reset "next property identifiers"
+    init();
+}
+
+void AllianceInfo::init() {
+    // Init first alliance
+    firstAlliance.address = ExodusAddress().ToString();
+    firstAlliance.name = "Gcoin alliance";
+    firstAlliance.url = "https://github.com/m04120310/omnicore";
+    firstAlliance.data = "First alliance. Address is exodus address.";
+    firstAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+}
+
+bool AllianceInfo::updateAllianceInfo(std::string address, const Entry& info) {
+    // cannot upddate implied SP
+    if (address == ExodusAddress().ToString()) {
+        return false;
+    }
+
+    return true;
+}
+
+bool AllianceInfo::putAllianceInfo(const Entry& info) {
+    return true;
+}
+
+bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
+    if (address == ExodusAddress().ToString()) {
+        info = firstAlliance;
+        return true;
+    }
+    return false;
+}
+
+bool AllianceInfo::hasAllianceInfo(std::string address) const {
+    // Special cases for constant SPs MSC and TMSC
+    if (address == ExodusAddress().ToString()) {
+        return true;
+    }
+    return false;
+}
+
+void AllianceInfo::printAll() const {
+}
+
+
+
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
 {
     // TODO: is a lock here needed
