@@ -125,22 +125,27 @@ uint32_t CMPSPInfo::peekNextSPID(uint8_t ecosystem) const
 
 bool CMPSPInfo::updateSP(uint32_t propertyId, const Entry& info)
 {
+    PrintToLog("%s(propertyId=%d)\n", __func__, propertyId);
+
     // cannot update implied SP
     if (OMNI_PROPERTY_MSC == propertyId || OMNI_PROPERTY_TMSC == propertyId) {
         return false;
     }
 
+    PrintToLog("updateSP(): DB key for property entry\n");
     // DB key for property entry
     CDataStream ssSpKey(SER_DISK, CLIENT_VERSION);
     ssSpKey << std::make_pair('s', propertyId);
     leveldb::Slice slSpKey(&ssSpKey[0], ssSpKey.size());
 
+    PrintToLog("updateSP(): DB value for property entry\n");
     // DB value for property entry
     CDataStream ssSpValue(SER_DISK, CLIENT_VERSION);
     ssSpValue.reserve(ssSpValue.GetSerializeSize(info));
     ssSpValue << info;
     leveldb::Slice slSpValue(&ssSpValue[0], ssSpValue.size());
 
+    PrintToLog("updateSP(): DB key for historical property entry\n");
     // DB key for historical property entry
     CDataStream ssSpPrevKey(SER_DISK, CLIENT_VERSION);
     ssSpPrevKey << 'b';
@@ -151,6 +156,7 @@ bool CMPSPInfo::updateSP(uint32_t propertyId, const Entry& info)
     leveldb::WriteBatch batch;
     std::string strSpPrevValue;
 
+    PrintToLog("updateSP(): if a value exists move it to the old key\n");
     // if a value exists move it to the old key
     if (!pdb->Get(readoptions, slSpKey, &strSpPrevValue).IsNotFound()) {
         batch.Put(slSpPrevKey, strSpPrevValue);
