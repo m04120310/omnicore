@@ -2127,6 +2127,7 @@ int mastercore_init() {
     // Alliance info
     printf("init alliance info db\n");
     allianceInfoDB = new AllianceInfo(GetDataDir() / "AllianceInfoDB", fReindex);
+    allianceInfoDB->printAll();
 
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);

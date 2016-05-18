@@ -267,9 +267,10 @@ public:
     bool updateAllianceInfo(std::string address, Entry& info);
     bool putAllianceInfo(std::string address, Entry& info);
     bool getAllianceInfo(std::string address, Entry& info);
-    bool hasAllianceInfo(std::string address) const;
+    bool hasAllianceInfo(std::string address);
+    bool getAllAllianceInfo(std::vector<Entry>& infoVec);
 
-    void printAll() const;
+    void printAll();
 };
 /*
 unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED = 0;

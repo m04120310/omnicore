@@ -602,18 +602,24 @@ bool AllianceInfo::updateAllianceInfo(std::string address, Entry& info) {
     if (address == ExodusAddress().ToString()) {
         return false;
     }
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
     Entry tmpEntry;
     std::string strSpValue;
-    if (!pdb->Get(readoptions, address, &strSpValue).IsNotFound()) {
+    if (!pdb->Get(readoptions, slAllianceKey, &strSpValue).IsNotFound()) {
         CDataStream oldDataValue(strSpValue.data(), strSpValue.data() + strSpValue.size(), SER_DISK, CLIENT_VERSION);
         oldDataValue >> tmpEntry;
         info.creation_block = tmpEntry.creation_block;
 
-        CDataStream ssSpValue(SER_DISK, CLIENT_VERSION);
-        ssSpValue.reserve(ssSpValue.GetSerializeSize(info));
-        ssSpValue << info;
-        leveldb::Slice slSpValue(&ssSpValue[0], ssSpValue.size());
-        leveldb::Status status = pdb->Put(writeoptions, address, slSpValue);
+        CDataStream ssAllianceValue(SER_DISK, CLIENT_VERSION);
+        ssAllianceValue.reserve(ssAllianceValue.GetSerializeSize(info));
+        ssAllianceValue << info;
+        leveldb::Slice slAllianceValue(&ssAllianceValue[0], ssAllianceValue.size());
+        leveldb::Status status = pdb->Put(writeoptions, slAllianceKey, slAllianceValue);
 
         if (!status.ok()) {
             PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
@@ -642,12 +648,18 @@ bool AllianceInfo::putAllianceInfo(std::string address, Entry& info) {
         return updateAllianceInfo(address, info);
     }
 
-    CDataStream ssSpValue(SER_DISK, CLIENT_VERSION);
-    ssSpValue.reserve(ssSpValue.GetSerializeSize(info));
-    ssSpValue << info;
-    leveldb::Slice slSpValue(&ssSpValue[0], ssSpValue.size());
 
-    leveldb::Status status = pdb->Put(writeoptions, address, slSpValue);
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    CDataStream ssAllianceValue(SER_DISK, CLIENT_VERSION);
+    ssAllianceValue.reserve(ssAllianceValue.GetSerializeSize(info));
+    ssAllianceValue << info;
+    leveldb::Slice slAllianceValue(&ssAllianceValue[0], ssAllianceValue.size());
+
+    leveldb::Status status = pdb->Put(writeoptions, slAllianceKey, slAllianceValue);
     PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
     return status.ok();
 }
@@ -672,9 +684,15 @@ bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
         info = firstAlliance;
         return true;
     }
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
     // DB value for property entry
-    std::string strSpValue;
-    leveldb::Status status = pdb->Get(readoptions, address, &strSpValue);
+    std::string strAllianceValue;
+    leveldb::Status status = pdb->Get(readoptions, slAllianceKey, &strAllianceValue);
     if (!status.ok()) {
         if (!status.IsNotFound()) {
             PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
@@ -683,8 +701,8 @@ bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
     }
 
     try {
-        CDataStream ssSpValue(strSpValue.data(), strSpValue.data() + strSpValue.size(), SER_DISK, CLIENT_VERSION);
-        ssSpValue >> info;
+        CDataStream ssAllianceValue(strAllianceValue.data(), strAllianceValue.data() + strAllianceValue.size(), SER_DISK, CLIENT_VERSION);
+        ssAllianceValue >> info;
     } catch (const std::exception& e) {
         PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, e.what());
         return false;
@@ -693,22 +711,85 @@ bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
     return true;
 }
 
-bool AllianceInfo::hasAllianceInfo(std::string address) const {
+bool AllianceInfo::hasAllianceInfo(std::string address) {
     // Special cases for constant SPs MSC and TMSC
     if (address == ExodusAddress().ToString()) {
         return true;
     }
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
     // DB value for property entry
-    std::string strSpValue;
-    leveldb::Status status = pdb->Get(readoptions, address, &strSpValue);
+    std::string strAllianceValue;
+    leveldb::Status status = pdb->Get(readoptions, slAllianceKey, &strAllianceValue);
 
     return status.ok();
 }
 
-void AllianceInfo::printAll() const {
+void AllianceInfo::printAll() {
+    // print off the hard coded firstAlliance
+    firstAlliance.print();
+
+    leveldb::Iterator* iter = NewIterator();
+
+    CDataStream ssAllianceKeyPrefix(SER_DISK, CLIENT_VERSION);
+    ssAllianceKeyPrefix << 'a';
+    leveldb::Slice slAllianceKeyPrefix(&ssAllianceKeyPrefix[0], ssAllianceKeyPrefix.size());
+
+    for (iter->Seek(slAllianceKeyPrefix); iter->Valid() && iter->key().starts_with(slAllianceKeyPrefix); iter->Next()) {
+        leveldb::Slice slAllianceKey = iter->key();
+
+        // deserialize the persisted data
+        leveldb::Slice slAllianceValue = iter->value();
+        Entry info;
+        try {
+            CDataStream ssAllianceValue(slAllianceValue.data(), slAllianceValue.data() + slAllianceValue.size(), SER_DISK, CLIENT_VERSION);
+            ssAllianceValue >> info;
+        } catch (const std::exception& e) {
+            PrintToConsole("<Malformed value in DB>\n");
+            PrintToLog("%s(): ERROR: %s\n", __func__, e.what());
+            continue;
+        }
+        info.print();
+    }
+
+    // clean up the iterator
+    delete iter;
 }
 
+bool AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
+    // print off the hard coded firstAlliance
+    infoVec.push_back(firstAlliance);
 
+    leveldb::Iterator* iter = NewIterator();
+
+    CDataStream ssAllianceKeyPrefix(SER_DISK, CLIENT_VERSION);
+    ssAllianceKeyPrefix << 'a';
+    leveldb::Slice slAllianceKeyPrefix(&ssAllianceKeyPrefix[0], ssAllianceKeyPrefix.size());
+
+    for (iter->Seek(slAllianceKeyPrefix); iter->Valid() && iter->key().starts_with(slAllianceKeyPrefix); iter->Next()) {
+        leveldb::Slice slAllianceKey = iter->key();
+
+        // deserialize the persisted data
+        leveldb::Slice slAllianceValue = iter->value();
+        Entry info;
+        try {
+            CDataStream ssAllianceValue(slAllianceValue.data(), slAllianceValue.data() + slAllianceValue.size(), SER_DISK, CLIENT_VERSION);
+            ssAllianceValue >> info;
+        } catch (const std::exception& e) {
+            PrintToConsole("<Malformed value in DB>\n");
+            PrintToLog("%s(): ERROR: %s\n", __func__, e.what());
+            continue;
+        }
+        infoVec.push_back(info);
+    }
+
+    // clean up the iterator
+    delete iter;
+}
 
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
 {
