@@ -2127,9 +2127,6 @@ int mastercore_init() {
     // Alliance info
     printf("init alliance info db\n");
     allianceInfoDB = new AllianceInfo(GetDataDir() / "AllianceInfoDB", fReindex);
-    AllianceInfo::Entry info;
-    allianceInfoDB->getAllianceInfo(ExodusAddress().ToString(), info);
-    info.print();
 
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);

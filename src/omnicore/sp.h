@@ -226,6 +226,21 @@ public:
         // status
         unsigned int status;
 
+        // Serialization
+        ADD_SERIALIZE_METHODS;
+
+        template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+            READWRITE(address);
+            READWRITE(name);
+            READWRITE(url);
+            READWRITE(data);
+            READWRITE(txid);
+            READWRITE(creation_block);
+            READWRITE(update_block);
+            READWRITE(status);
+        }
+
         void print();
     };
 
@@ -247,8 +262,10 @@ public:
 
     void init();
     void clear();
-    bool updateAllianceInfo(std::string address, const Entry& info);
-    bool putAllianceInfo(const Entry& info);
+    static Entry allianceInfoEntryBuilder(std::string address, std::string name, std::string url,
+                                 std::string data, uint256 txid, uint256 blockId);
+    bool updateAllianceInfo(std::string address, Entry& info);
+    bool putAllianceInfo(std::string address, Entry& info);
     bool getAllianceInfo(std::string address, Entry& info);
     bool hasAllianceInfo(std::string address) const;
 

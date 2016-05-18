@@ -597,17 +597,74 @@ void AllianceInfo::init() {
     firstAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
 }
 
-bool AllianceInfo::updateAllianceInfo(std::string address, const Entry& info) {
+bool AllianceInfo::updateAllianceInfo(std::string address, Entry& info) {
     // cannot upddate implied SP
     if (address == ExodusAddress().ToString()) {
         return false;
     }
+    Entry tmpEntry;
+    std::string strSpValue;
+    if (!pdb->Get(readoptions, address, &strSpValue).IsNotFound()) {
+        CDataStream oldDataValue(strSpValue.data(), strSpValue.data() + strSpValue.size(), SER_DISK, CLIENT_VERSION);
+        oldDataValue >> tmpEntry;
+        info.creation_block = tmpEntry.creation_block;
+
+        CDataStream ssSpValue(SER_DISK, CLIENT_VERSION);
+        ssSpValue.reserve(ssSpValue.GetSerializeSize(info));
+        ssSpValue << info;
+        leveldb::Slice slSpValue(&ssSpValue[0], ssSpValue.size());
+        leveldb::Status status = pdb->Put(writeoptions, address, slSpValue);
+
+        if (!status.ok()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+            return false;
+        }
+    } else {
+        PrintToLog("Attemp to update non-exist alliance.\n");
+        PrintToConsole("Attemp to update non-exist alliance.\n");
+        return false;
+    }
+
 
     return true;
 }
 
-bool AllianceInfo::putAllianceInfo(const Entry& info) {
-    return true;
+bool AllianceInfo::putAllianceInfo(std::string address, Entry& info) {
+    // key is address
+    // if already exist, change to update.
+    if (!pdb) {
+        return false;
+    }
+    if (address == ExodusAddress().ToString()) {
+        return false;
+    }
+    if (hasAllianceInfo(address)) {
+        return updateAllianceInfo(address, info);
+    }
+
+    CDataStream ssSpValue(SER_DISK, CLIENT_VERSION);
+    ssSpValue.reserve(ssSpValue.GetSerializeSize(info));
+    ssSpValue << info;
+    leveldb::Slice slSpValue(&ssSpValue[0], ssSpValue.size());
+
+    leveldb::Status status = pdb->Put(writeoptions, address, slSpValue);
+    PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
+    return status.ok();
+}
+
+AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, std::string name, std::string url,
+                                                           std::string data, uint256 txid, uint256 blockId) {
+    AllianceInfo::Entry entry;
+    entry.address = address;
+    entry.name = name;
+    entry.url = url;
+    entry.data = data;
+    entry.txid = txid;
+    entry.creation_block = blockId;
+    entry.update_block = blockId;
+    entry.status = ALLIANCE_INFO_STATUS_PENDING;
+
+    return entry;
 }
 
 bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
@@ -615,7 +672,25 @@ bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
         info = firstAlliance;
         return true;
     }
-    return false;
+    // DB value for property entry
+    std::string strSpValue;
+    leveldb::Status status = pdb->Get(readoptions, address, &strSpValue);
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+        }
+        return false;
+    }
+
+    try {
+        CDataStream ssSpValue(strSpValue.data(), strSpValue.data() + strSpValue.size(), SER_DISK, CLIENT_VERSION);
+        ssSpValue >> info;
+    } catch (const std::exception& e) {
+        PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, e.what());
+        return false;
+    }
+
+    return true;
 }
 
 bool AllianceInfo::hasAllianceInfo(std::string address) const {
@@ -623,7 +698,11 @@ bool AllianceInfo::hasAllianceInfo(std::string address) const {
     if (address == ExodusAddress().ToString()) {
         return true;
     }
-    return false;
+    // DB value for property entry
+    std::string strSpValue;
+    leveldb::Status status = pdb->Get(readoptions, address, &strSpValue);
+
+    return status.ok();
 }
 
 void AllianceInfo::printAll() const {
