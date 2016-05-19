@@ -74,6 +74,7 @@ private:
 
     // Gcoin vote system usage
     char voteType[10];
+    uint16_t approve_threshold;
 
     // MetaDEx
     unsigned int desired_property;
