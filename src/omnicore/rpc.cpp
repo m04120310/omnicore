@@ -89,6 +89,8 @@ void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
     property_obj.push_back(Pair("data", sProperty.data));
     property_obj.push_back(Pair("url", sProperty.url));
     property_obj.push_back(Pair("divisible", sProperty.isDivisible()));
+    property_obj.push_back(Pair("approve threshold", (uint16_t) sProperty.approve_threshold));
+    property_obj.push_back(Pair("approve time", (uint16_t) sProperty.approve_time));
 }
 
 void MetaDexObjectToJSON(const CMPMetaDEx& obj, Object& metadex_obj)
@@ -696,6 +698,7 @@ Value omni_listproperties(const Array& params, bool fHelp)
 
     LOCK(cs_tally);
 
+    // Mainnet
     uint32_t nextSPID = _my_sps->peekNextSPID(1);
     for (uint32_t propertyId = 1; propertyId < nextSPID; propertyId++) {
         CMPSPInfo::Entry sp;
@@ -708,6 +711,7 @@ Value omni_listproperties(const Array& params, bool fHelp)
         }
     }
 
+    // Testnet
     uint32_t nextTestSPID = _my_sps->peekNextSPID(2);
     for (uint32_t propertyId = TEST_ECO_PROPERTY_1; propertyId < nextTestSPID; propertyId++) {
         CMPSPInfo::Entry sp;
