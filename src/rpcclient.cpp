@@ -219,6 +219,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "test_class_c", 3 },
     { "test_multisig_tx", 15},
     { "gcoin_vote_for_license", 1},
+    { "gcoin_get_alliance_info_list", 0},
+    { "gcoin_get_alliacne_info_by_address", 1},
 };
 
 class CRPCConvertTable

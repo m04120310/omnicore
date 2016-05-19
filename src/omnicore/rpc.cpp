@@ -74,6 +74,13 @@ void PopulateFailure(int error)
     throw JSONRPCError(RPC_INTERNAL_ERROR, "Generic transaction population failure");
 }
 
+void AllianceToJSON(const AllianceInfo::Entry& entry, Object& alliance_obj) {
+    alliance_obj.push_back(Pair("address", entry.address));
+    alliance_obj.push_back(Pair("name", entry.name));
+    alliance_obj.push_back(Pair("data", entry.data));
+    alliance_obj.push_back(Pair("url", entry.url));
+}
+
 void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
 {
     property_obj.push_back(Pair("name", sProperty.name));
@@ -143,6 +150,41 @@ bool BalanceToJSON(const std::string& address, uint32_t property, Object& balanc
     } else {
         return true;
     }
+}
+
+
+// Show alliance list
+Value gcoin_get_alliance_info_list(const Array& params, bool fHelp) {
+    if (fHelp)
+        throw runtime_error("Show all alliance info.\n");
+    std::vector<AllianceInfo::Entry> infoVec;
+    allianceInfoDB->getAllAllianceInfo(infoVec);
+
+    Array response;
+    for (unsigned int i = 0; i < infoVec.size(); i++) {
+        AllianceInfo::Entry info = infoVec[i];
+        Object allianceObj;
+        AllianceToJSON(info, allianceObj);
+        response.push_back(allianceObj);
+    }
+
+    return response;
+}
+
+// Show alliance info by address
+Value gcoin_get_alliacne_info_by_address(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 1)
+        throw runtime_error("Example: ./omnicore -testnet gcoin_get_alliacne_info_by_address <address>\n");
+    Array response;
+    std::string address = ParseAddress(params[0]);
+
+    AllianceInfo::Entry info;
+    Object allianceObj;
+    if(allianceInfoDB->getAllianceInfo(address, info)) {
+        AllianceToJSON(info, allianceObj);
+        response.push_back(allianceObj);
+        return response;
+    } else return "Given address is not a member of alliance.";
 }
 
 // generate a list of seed blocks based on the data in LevelDB

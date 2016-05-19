@@ -5,7 +5,6 @@
  */
 
 #include "omnicore/omnicore.h"
-
 #include "omnicore/activation.h"
 #include "omnicore/consensushash.h"
 #include "omnicore/convert.h"
@@ -135,7 +134,7 @@ CMPTxList *mastercore::p_txlistdb;
 CMPTradeList *mastercore::t_tradelistdb;
 CMPSTOList *mastercore::s_stolistdb;
 COmniTransactionDB *mastercore::p_OmniTXDB;
-
+AllianceInfo *mastercore::allianceInfoDB;
 // indicate whether persistence is enabled at this point, or not
 // used to write/read files, for breakout mode, debugging, etc.
 static bool writePersistence(int block_now)
@@ -367,7 +366,7 @@ bool mastercore::update_tally_map(const std::string& who, uint32_t propertyId, i
         PrintToLog("%s(%s, %u=0x%X, %+d, ttype=%d) ERROR: invalid tally type\n", __func__, who, propertyId, propertyId, amount, ttype);
         return false;
     }
-    
+
     bool bRet = false;
     int64_t before = 0;
     int64_t after = 0;
@@ -2060,8 +2059,7 @@ void clear_all_state()
  *
  * @return An exit code, indicating success or failure
  */
-int mastercore_init()
-{
+int mastercore_init() {
     LOCK(cs_tally);
 
     if (mastercoreInitialized) {
@@ -2100,12 +2098,18 @@ int mastercore_init()
             boost::filesystem::path spPath = GetDataDir() / "MP_spinfo";
             boost::filesystem::path stoPath = GetDataDir() / "MP_stolist";
             boost::filesystem::path omniTXDBPath = GetDataDir() / "Omni_TXDB";
-            if (boost::filesystem::exists(persistPath)) boost::filesystem::remove_all(persistPath);
-            if (boost::filesystem::exists(txlistPath)) boost::filesystem::remove_all(txlistPath);
-            if (boost::filesystem::exists(tradePath)) boost::filesystem::remove_all(tradePath);
-            if (boost::filesystem::exists(spPath)) boost::filesystem::remove_all(spPath);
-            if (boost::filesystem::exists(stoPath)) boost::filesystem::remove_all(stoPath);
-            if (boost::filesystem::exists(omniTXDBPath)) boost::filesystem::remove_all(omniTXDBPath);
+            if (boost::filesystem::exists(persistPath))
+                boost::filesystem::remove_all(persistPath);
+            if (boost::filesystem::exists(txlistPath))
+                boost::filesystem::remove_all(txlistPath);
+            if (boost::filesystem::exists(tradePath))
+                boost::filesystem::remove_all(tradePath);
+            if (boost::filesystem::exists(spPath))
+                boost::filesystem::remove_all(spPath);
+            if (boost::filesystem::exists(stoPath))
+                boost::filesystem::remove_all(stoPath);
+            if (boost::filesystem::exists(omniTXDBPath))
+                boost::filesystem::remove_all(omniTXDBPath);
             PrintToLog("Success clearing persistence files in datadir %s\n", GetDataDir().string());
             startClean = true;
         } catch (const boost::filesystem::filesystem_error& e) {
@@ -2120,7 +2124,11 @@ int mastercore_init()
     _my_sps = new CMPSPInfo(GetDataDir() / "MP_spinfo", fReindex);
     p_OmniTXDB = new COmniTransactionDB(GetDataDir() / "Omni_TXDB", fReindex);
 
-    printf("After init _my_sps\n");
+    // Alliance info
+    printf("init alliance info db\n");
+    allianceInfoDB = new AllianceInfo(GetDataDir() / "AllianceInfoDB", fReindex);
+    allianceInfoDB->printAll();
+
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);
 
