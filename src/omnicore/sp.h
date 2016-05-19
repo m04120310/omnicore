@@ -92,6 +92,11 @@ public:
         //   txid -> granted amount, revoked amount
         std::map<uint256, std::vector<int64_t> > historicalData;
 
+        // For License properties
+        uint16_t approve_threshold;
+        uint16_t approve_time;
+        uint16_t reject_time;
+
         Entry();
 
         ADD_SERIALIZE_METHODS;
@@ -122,6 +127,9 @@ public:
             READWRITE(fixed);
             READWRITE(manual);
             READWRITE(historicalData);
+            READWRITE(approve_threshold);
+            READWRITE(approve_time);
+            READWRITE(reject_time);
         }
 
         bool isDivisible() const;

@@ -651,15 +651,19 @@ bool CMPTransaction::interpret_Test() {
 
 /* Tx 500 */
 bool CMPTransaction::interpret_VoteForLicense() {
-    uint32_t propertyId;
 
     memcpy(&property, &pkt[4], 4);
     swapByteOrder32(property);
+
+    printf("%s(): property %d\n", __func__, property);
+    PrintToLog("%s(): property %d\n", __func__, property);
+
     char *p = 8 + (char*) &pkt;
     std::string tmp(p);
     memset(voteType, 0, sizeof(voteType));
     memcpy(voteType, tmp.c_str(), tmp.length());
-    printf("voteTypd: %s\n", voteType);
+    printf("%s(): voteType is %s\n", __func__, voteType);
+    PrintToLog("%s(): voteType is %s\n", __func__, voteType);
 
     return true;
 }
@@ -1709,6 +1713,9 @@ int CMPTransaction::logicMath_CreatePropertyManaged()
     newSP.manual = true;
     newSP.creation_block = blockHash;
     newSP.update_block = newSP.creation_block;
+    newSP.approve_threshold = 0;
+    newSP.approve_time = 0;
+    newSP.reject_time = 0;
 
     uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
     assert(propertyId > 0);
@@ -1939,10 +1946,53 @@ int CMPTransaction::logicMath_ChangeIssuer()
     return 0;
 }
 
-/* Tx 500 vote license */
+/* Tx 500 */
 int CMPTransaction::logicMath_VoteForLicense() {
-    printf("logicMath_VoteForLicense\n");
-    /* TODO: do something after receiving vote tx. */
+    printf("%s(): property %d\n", __func__, property);
+    PrintToLog("%s(): property %d\n", __func__, property);
+
+    if (OMNI_PROPERTY_MSC == property || OMNI_PROPERTY_TMSC == property) {
+        return false;
+    }
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare property id
+    std::cout<<"property "<<property<<std::endl;
+    if (!_my_sps->hasSP(property)) {
+        PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
+        return (PKT_ERROR_TOKENS -24);
+    }
+
+    CMPSPInfo::Entry sp;
+    assert(_my_sps->getSP(property, sp));
+
+    // compare 'voteType': approve or reject
+    // and set the approve_time and reject_time
+    if (strcmp(voteType, "approve") == 0) {
+        PrintToLog("%s(): Vote for approve\n", __func__);
+        sp.approve_time += 1;
+    }
+    else if (strcmp(voteType, "reject") == 0) {
+        sp.reject_time += 1;
+        PrintToLog("%s(): Vote for reject\n", __func__);
+    }
+
+    // Save Updated SP to DB
+    assert(_my_sps->updateSP(property, sp));
+    PrintToLog("%s(): property %d approve time: %d \n", __func__, property, sp.approve_time);
+    PrintToLog("%s(): property %d reject time: %d \n", __func__, property, sp.reject_time);
+
     return 0;
 }
 
