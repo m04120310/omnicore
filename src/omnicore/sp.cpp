@@ -797,6 +797,22 @@ bool AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
     delete iter;
 }
 
+bool AllianceInfo::deleteAllianceInfo(std::string address) {
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    if(!hasAllianceInfo(address)) {
+        PrintToLog("Delete allianceInfo error. Try to delete non-exist alliance: %s\n", address);
+        return false;
+    }
+
+    leveldb::Status status = pdb->Delete(writeoptions, slAllianceKey);
+    return true;
+}
+
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
 {
     // TODO: is a lock here needed

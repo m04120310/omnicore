@@ -277,6 +277,7 @@ public:
     bool getAllianceInfo(std::string address, Entry& info);
     bool hasAllianceInfo(std::string address);
     bool getAllAllianceInfo(std::vector<Entry>& infoVec);
+    bool deleteAllianceInfo(std::string address);
 
     void printAll();
 };
