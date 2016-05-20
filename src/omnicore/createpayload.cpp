@@ -1,8 +1,9 @@
 // This file serves to provide payload creation functions.
 
 #include "omnicore/createpayload.h"
-
 #include "omnicore/convert.h"
+#include "omnicore/sp.h"
+#include "omnicore/omnicore.h"
 
 #include "tinyformat.h"
 
@@ -10,6 +11,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <math.h>
 
 /**
  * Pushes bytes to the end of a vector.
@@ -251,7 +253,13 @@ std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint
     std::vector<unsigned char> payload;
     uint16_t messageType = 54;
     uint16_t messageVer = 0;
-    uint16_t approveThreshold = 1;
+
+    // get all alliances info and the alliances number
+    std::vector<AllianceInfo::Entry> infoVec;
+    mastercore::allianceInfoDB->getAllAllianceInfo(infoVec);
+    uint16_t approveThreshold = uint16_t (round(infoVec.size() * LICENSE_APPROVE_PERCENTAGE));
+    PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+
     mastercore::swapByteOrder16(messageVer);
     mastercore::swapByteOrder16(messageType);
     mastercore::swapByteOrder16(approveThreshold);
