@@ -1979,8 +1979,13 @@ int CMPTransaction::logicMath_VoteForLicense() {
         blockHash = pindex->GetBlockHash();
     }
 
+    // compare sender with Alliance
+    if (!allianceInfoDB->hasAllianceInfo(sender)) {
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
     // compare property id
-    std::cout<<"property "<<property<<std::endl;
     if (!_my_sps->hasSP(property)) {
         PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
         return (PKT_ERROR_TOKENS -24);
