@@ -109,6 +109,7 @@ private:
     /* Gcoin usage */
     bool interpret_Test();
     bool interpret_VoteForLicense();
+    bool interpret_VoteForAlliance();
 
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
@@ -135,6 +136,7 @@ private:
      */
     // Gcoin usage
     int logicMath_VoteForLicense();
+    int logicMath_VoteForAlliance();
 
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();
