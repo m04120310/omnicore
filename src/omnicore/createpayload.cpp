@@ -1,8 +1,9 @@
 // This file serves to provide payload creation functions.
 
 #include "omnicore/createpayload.h"
-
 #include "omnicore/convert.h"
+#include "omnicore/sp.h"
+#include "omnicore/omnicore.h"
 
 #include "tinyformat.h"
 
@@ -10,6 +11,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <math.h>
 
 /**
  * Pushes bytes to the end of a vector.
@@ -251,8 +253,16 @@ std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint
     std::vector<unsigned char> payload;
     uint16_t messageType = 54;
     uint16_t messageVer = 0;
+
+    // get all alliances info and the alliances number
+    std::vector<AllianceInfo::Entry> infoVec;
+    mastercore::allianceInfoDB->getAllAllianceInfo(infoVec);
+    uint16_t approveThreshold = uint16_t (round(infoVec.size() * LICENSE_APPROVE_PERCENTAGE));
+    PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+
     mastercore::swapByteOrder16(messageVer);
     mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(approveThreshold);
     mastercore::swapByteOrder16(propertyType);
     mastercore::swapByteOrder32(previousPropertyId);
     if (category.size() > 255) category = category.substr(0,255);
@@ -266,6 +276,7 @@ std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint
     PUSH_BACK_BYTES(payload, ecosystem);
     PUSH_BACK_BYTES(payload, propertyType);
     PUSH_BACK_BYTES(payload, previousPropertyId);
+    PUSH_BACK_BYTES(payload, approveThreshold);
     payload.insert(payload.end(), category.begin(), category.end());
     payload.push_back('\0');
     payload.insert(payload.end(), subcategory.begin(), subcategory.end());

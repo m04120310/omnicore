@@ -61,6 +61,9 @@ int const MAX_STATE_HISTORY = 50;
 #define PACKET_SIZE         31
 #define MAX_PACKETS        255
 
+// Gcoin license's threshold percentage(approve vote from alliances)
+#define LICENSE_APPROVE_PERCENTAGE 2.0/3.0
+
 // Transaction types, from the spec
 enum TransactionType {
   MSC_TYPE_SIMPLE_SEND              =  0,

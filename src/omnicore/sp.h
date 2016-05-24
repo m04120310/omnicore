@@ -94,8 +94,8 @@ public:
 
         // For License properties
         uint16_t approve_threshold;
-        uint16_t approve_time;
-        uint16_t reject_time;
+        uint16_t approve_count;
+        uint16_t reject_count;
 
         Entry();
 
@@ -128,8 +128,8 @@ public:
             READWRITE(manual);
             READWRITE(historicalData);
             READWRITE(approve_threshold);
-            READWRITE(approve_time);
-            READWRITE(reject_time);
+            READWRITE(approve_count);
+            READWRITE(reject_count);
         }
 
         bool isDivisible() const;

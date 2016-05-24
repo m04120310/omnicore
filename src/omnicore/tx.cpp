@@ -544,13 +544,18 @@ bool CMPTransaction::interpret_CreatePropertyManaged()
     if (pkt_size < 17) {
         return false;
     }
-    const char* p = 11 + (char*) &pkt;
+    const char* p = 13 + (char*) &pkt;
     std::vector<std::string> spstr;
     memcpy(&ecosystem, &pkt[4], 1);
     memcpy(&prop_type, &pkt[5], 2);
     swapByteOrder16(prop_type);
     memcpy(&prev_prop_id, &pkt[7], 4);
     swapByteOrder32(prev_prop_id);
+
+    // Get approve_threshold
+    memcpy(&approve_threshold, &pkt[11], 2);
+    swapByteOrder16(approve_threshold);
+
     for (int i = 0; i < 5; i++) {
         spstr.push_back(std::string(p));
         p += spstr.back().size() + 1;
@@ -566,6 +571,7 @@ bool CMPTransaction::interpret_CreatePropertyManaged()
         PrintToLog("\t       ecosystem: %d\n", ecosystem);
         PrintToLog("\t   property type: %d (%s)\n", prop_type, strPropertyType(prop_type));
         PrintToLog("\tprev property id: %d\n", prev_prop_id);
+        PrintToLog("\tapprove threshold: %d\n", approve_threshold);
         PrintToLog("\t        category: %s\n", category);
         PrintToLog("\t     subcategory: %s\n", subcategory);
         PrintToLog("\t            name: %s\n", name);
@@ -1713,9 +1719,9 @@ int CMPTransaction::logicMath_CreatePropertyManaged()
     newSP.manual = true;
     newSP.creation_block = blockHash;
     newSP.update_block = newSP.creation_block;
-    newSP.approve_threshold = 0;
-    newSP.approve_time = 0;
-    newSP.reject_time = 0;
+    newSP.approve_threshold = approve_threshold;
+    newSP.approve_count = 0;
+    newSP.reject_count = 0;
 
     uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
     assert(propertyId > 0);
@@ -1766,6 +1772,12 @@ int CMPTransaction::logicMath_GrantTokens()
     if (!sp.manual) {
         PrintToLog("%s(): rejected: property %d is not managed\n", __func__, property);
         return (PKT_ERROR_TOKENS -42);
+    }
+
+    // Check license approve or not
+    if (sp.approve_count < sp.approve_threshold) {
+        PrintToLog("%s(): rejected: approve_count[=%d] not reach approve_threshold[=%d]\n", __func__, sp.approve_count, sp.approve_threshold);
+        return 0;
     }
 
     if (sender != sp.issuer) {
@@ -1967,8 +1979,13 @@ int CMPTransaction::logicMath_VoteForLicense() {
         blockHash = pindex->GetBlockHash();
     }
 
+    // compare sender with Alliance
+    if (!allianceInfoDB->hasAllianceInfo(sender)) {
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
     // compare property id
-    std::cout<<"property "<<property<<std::endl;
     if (!_my_sps->hasSP(property)) {
         PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
         return (PKT_ERROR_TOKENS -24);
@@ -1978,20 +1995,20 @@ int CMPTransaction::logicMath_VoteForLicense() {
     assert(_my_sps->getSP(property, sp));
 
     // compare 'voteType': approve or reject
-    // and set the approve_time and reject_time
+    // and set the approve_count and reject_count
     if (strcmp(voteType, "approve") == 0) {
         PrintToLog("%s(): Vote for approve\n", __func__);
-        sp.approve_time += 1;
+        sp.approve_count += 1;
     }
     else if (strcmp(voteType, "reject") == 0) {
-        sp.reject_time += 1;
+        sp.reject_count += 1;
         PrintToLog("%s(): Vote for reject\n", __func__);
     }
 
     // Save Updated SP to DB
     assert(_my_sps->updateSP(property, sp));
-    PrintToLog("%s(): property %d approve time: %d \n", __func__, property, sp.approve_time);
-    PrintToLog("%s(): property %d reject time: %d \n", __func__, property, sp.reject_time);
+    PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
+    PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
 
     return 0;
 }
