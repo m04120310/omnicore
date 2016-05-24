@@ -1720,8 +1720,8 @@ int CMPTransaction::logicMath_CreatePropertyManaged()
     newSP.creation_block = blockHash;
     newSP.update_block = newSP.creation_block;
     newSP.approve_threshold = approve_threshold;
-    newSP.approve_time = 0;
-    newSP.reject_time = 0;
+    newSP.approve_count = 0;
+    newSP.reject_count = 0;
 
     uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
     assert(propertyId > 0);
@@ -1775,8 +1775,8 @@ int CMPTransaction::logicMath_GrantTokens()
     }
 
     // Check license approve or not
-    if (sp.approve_time < sp.approve_threshold) {
-        PrintToLog("%s(): rejected: approve_time[=%d] not reach approve_threshold[=%d]\n", __func__, sp.approve_time, sp.approve_threshold);
+    if (sp.approve_count < sp.approve_threshold) {
+        PrintToLog("%s(): rejected: approve_count[=%d] not reach approve_threshold[=%d]\n", __func__, sp.approve_count, sp.approve_threshold);
         return 0;
     }
 
@@ -1995,20 +1995,20 @@ int CMPTransaction::logicMath_VoteForLicense() {
     assert(_my_sps->getSP(property, sp));
 
     // compare 'voteType': approve or reject
-    // and set the approve_time and reject_time
+    // and set the approve_count and reject_count
     if (strcmp(voteType, "approve") == 0) {
         PrintToLog("%s(): Vote for approve\n", __func__);
-        sp.approve_time += 1;
+        sp.approve_count += 1;
     }
     else if (strcmp(voteType, "reject") == 0) {
-        sp.reject_time += 1;
+        sp.reject_count += 1;
         PrintToLog("%s(): Vote for reject\n", __func__);
     }
 
     // Save Updated SP to DB
     assert(_my_sps->updateSP(property, sp));
-    PrintToLog("%s(): property %d approve time: %d \n", __func__, property, sp.approve_time);
-    PrintToLog("%s(): property %d reject time: %d \n", __func__, property, sp.reject_time);
+    PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
+    PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
 
     return 0;
 }

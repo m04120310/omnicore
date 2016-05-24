@@ -90,7 +90,7 @@ void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
     property_obj.push_back(Pair("url", sProperty.url));
     property_obj.push_back(Pair("divisible", sProperty.isDivisible()));
     property_obj.push_back(Pair("approve threshold", (uint16_t) sProperty.approve_threshold));
-    property_obj.push_back(Pair("approve time", (uint16_t) sProperty.approve_time));
+    property_obj.push_back(Pair("approve count", (uint16_t) sProperty.approve_count));
 }
 
 void MetaDexObjectToJSON(const CMPMetaDEx& obj, Object& metadex_obj)
