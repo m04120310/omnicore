@@ -1980,7 +1980,7 @@ int CMPTransaction::logicMath_VoteForLicense() {
     }
 
     // compare sender with Alliance
-    if (!allianceInfoDB->hasAllianceInfo(sender)) {
+    if (!allianceInfoDB->isAllianceApproved(sender)) {
         PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
         return false;
     }

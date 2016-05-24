@@ -766,7 +766,7 @@ void AllianceInfo::printAll() {
     delete iter;
 }
 
-bool AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
+void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
     // print off the hard coded firstAlliance
     infoVec.push_back(firstAlliance);
 
@@ -798,7 +798,6 @@ bool AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
 }
 
 bool AllianceInfo::deleteAllianceInfo(std::string address) {
-
     // DB key for property entry
     CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
     ssAllianceKey << std::make_pair('a', address);
@@ -811,6 +810,18 @@ bool AllianceInfo::deleteAllianceInfo(std::string address) {
 
     leveldb::Status status = pdb->Delete(writeoptions, slAllianceKey);
     return true;
+}
+
+bool AllianceInfo::isAllianceApproved(std::string address) {
+    Entry info;
+    if (!getAllianceInfo(address, info)) {
+        return false;
+    }
+    if (info.status != ALLIANCE_INFO_STATUS_APPROVED) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
