@@ -22,6 +22,8 @@
 #include "sync.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
+#include "base58.h"
+
 #endif
 
 #include "json/json_spirit_value.h"
@@ -123,9 +125,15 @@ Value gcoin_vote_for_license(const Array& params, bool fHelp) {
                              "params[0]: from address.\n"
                              "params[1]: property id.\n"
                              "params[2]: approve/reject\n");
+
     std::string fromAddress = ParseAddress(params[0]);
     uint32_t propertyId = ParsePropertyId(params[1]);
     std::string voteType = params[2].get_str();
+
+    if (!allianceInfoDB->isAllianceApproved(fromAddress)) {
+        throw runtime_error("From address is not a member of alliance.");
+    }
+
     if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
         throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
     }
