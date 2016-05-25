@@ -326,12 +326,13 @@ extern json_spirit::Value getsto_MP(const json_spirit::Array& params, bool fHelp
 extern json_spirit::Value gettrade_MP(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value listblocktransactions_MP(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getallbalancesforaddress_MP(const json_spirit::Array& params, bool fHelp);
-// Test rpcs
+// Gcoin goverance structure calls
 extern json_spirit::Value test_class_c(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value test_class_b(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value test_multisig_tx(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_vote_for_license(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_vote_for_alliance(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value gcoin_apply_alliance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_get_alliance_info_list(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_get_alliacne_info_by_address(const json_spirit::Array& params, bool fHelp);
 
