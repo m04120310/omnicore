@@ -16,6 +16,7 @@
 #include "omnicore/sp.h"
 #include "omnicore/tx.h"
 
+#include "base58.h"
 #include "init.h"
 #include "main.h"
 #include "rpcserver.h"
@@ -145,6 +146,47 @@ Value gcoin_vote_for_license(const Array& params, bool fHelp) {
     uint256 txid;
     std::string rawHex;
     int result = ClassAgnosticWalletTXBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            // PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, amount);
+            return txid.GetHex();
+        }
+    }
+}
+
+// vote for alliance tx
+Value gcoin_vote_for_alliance(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 3)
+        throw runtime_error("vote for license tx argument error.\n"
+                             "params[0]: from address.\n"
+                             "params[1]: voted address.\n"
+                             "params[2]: approve/reject\n");
+    std::string fromAddress = ParseAddress(params[0]);
+    // Voted address as receiver addr
+    std::string votedAddress = ParseAddress(params[1]);
+    std::string voteType = params[2].get_str();
+
+    if (!allianceInfoDB->isAllianceApproved(fromAddress)) {
+        throw runtime_error("From address is not a member of alliance.");
+    }
+
+    if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
+        throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
+    }
+    printf("votedAddress: %s, voteType: %s\n", votedAddress.c_str(), voteType.c_str());
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_VoteForAlliance(voteType);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, votedAddress, "", 0, payload, txid, rawHex, autoCommit);
 
     // check error and return the txid (or raw hex depending on autocommit)
     if (result != 0) {

@@ -41,6 +41,7 @@ std::string mastercore::strTransactionType(uint16_t txType)
         case GCOIN_TYPE_TEST_CLASS_B: return "Gcoin Test Class B";
         case GCOIN_TYPE_TEST_CLASS_C: return "Gcoin Test Class C";
         case GCOIN_TYPE_VOTE_FOR_LICENSE: return "Gcoin Vote For License";
+        case GCOIN_TYPE_VOTE_FOR_ALLIANCE: return "Gcoin Vote For Alliance";
         /* original omni */
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
@@ -113,6 +114,9 @@ bool CMPTransaction::interpret_Transaction()
 
         case GCOIN_TYPE_VOTE_FOR_LICENSE:
             return interpret_VoteForLicense();
+
+        case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
+            return interpret_VoteForAlliance();
 
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
@@ -648,9 +652,9 @@ bool CMPTransaction::interpret_Test() {
     char* p = 4 + (char*) &pkt;
     std::string data(p);
     memset(test_data, 0, sizeof(test_data));
-    printf("data length: %d, data: %s\n", data.length(), data.c_str());
+    PrintToConsole("data length: %d, data: %s\n", data.length(), data.c_str());
     memcpy(test_data, data.c_str(), data.length());
-    printf("test data: %s\n", test_data);
+    PrintToConsole("test data: %s\n", test_data);
 
     return true;
 }
@@ -661,15 +665,27 @@ bool CMPTransaction::interpret_VoteForLicense() {
     memcpy(&property, &pkt[4], 4);
     swapByteOrder32(property);
 
-    printf("%s(): property %d\n", __func__, property);
+    PrintToConsole("%s(): property %d\n", __func__, property);
     PrintToLog("%s(): property %d\n", __func__, property);
 
     char *p = 8 + (char*) &pkt;
     std::string tmp(p);
     memset(voteType, 0, sizeof(voteType));
     memcpy(voteType, tmp.c_str(), tmp.length());
-    printf("%s(): voteType is %s\n", __func__, voteType);
+    PrintToConsole("%s(): voteType is %s\n", __func__, voteType);
     PrintToLog("%s(): voteType is %s\n", __func__, voteType);
+
+    return true;
+}
+
+/* Tx 501 */
+bool CMPTransaction::interpret_VoteForAlliance() {
+    char *p = 4 + (char*) &pkt;
+    std::string tmp(p);
+    memset(voteType, 0, sizeof(voteType));
+    memcpy(voteType, tmp.c_str(), tmp.length());
+    PrintToConsole("%s(): voted addr: %s, voteType is %s\n", __func__, receiver, voteType);
+    PrintToLog("%s(): voted addr: %s, voteType is %s\n", __func__, receiver, voteType);
 
     return true;
 }
@@ -750,6 +766,9 @@ int CMPTransaction::interpretPacket()
     switch (type) {
         case GCOIN_TYPE_VOTE_FOR_LICENSE:
             return logicMath_VoteForLicense();
+
+        case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
+            return logicMath_VoteForAlliance();
 
         case MSC_TYPE_SIMPLE_SEND:
             return logicMath_SimpleSend();
@@ -2010,6 +2029,12 @@ int CMPTransaction::logicMath_VoteForLicense() {
     PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
     PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
 
+    return 0;
+}
+
+/* Tx 500 */
+int CMPTransaction::logicMath_VoteForAlliance() {
+    PrintToConsole("%s()\n", __func__);
     return 0;
 }
 
