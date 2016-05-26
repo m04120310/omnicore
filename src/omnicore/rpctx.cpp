@@ -182,7 +182,7 @@ Value gcoin_vote_for_alliance(const Array& params, bool fHelp) {
     printf("votedAddress: %s, voteType: %s\n", votedAddress.c_str(), voteType.c_str());
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_VoteForAlliance(voteType);
-
+    
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;
     std::string rawHex;
@@ -196,6 +196,46 @@ Value gcoin_vote_for_alliance(const Array& params, bool fHelp) {
             return rawHex;
         } else {
             // PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, amount);
+            return txid.GetHex();
+        }
+    }
+}
+
+// apply alliance
+Value gcoin_apply_alliance(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 4)
+        throw runtime_error(
+            "gcoin_apply_alliance error\n"
+            "params[0]: from address.\n"
+            "params[1]: alliance name\n"
+            "params[2]: alliance URL\n"
+            "params[3]: alliance description data\n"
+        );
+
+    // obtain parameters & info
+    std::string fromAddress = ParseAddress(params[0]);
+    std::string alliance_name = ParseText(params[1]);
+    std::string url = ParseText(params[2]);
+    std::string data = ParseText(params[3]);
+    PrintToLog("%s(): alliance name: %s\n", __func__, alliance_name);
+    PrintToLog("%s(): alliance url: %s\n", __func__, url);
+    PrintToLog("%s(): alliance data: %s\n", __func__, data);
+
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_ApplyAlliance(alliance_name, url, data);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
             return txid.GetHex();
         }
     }

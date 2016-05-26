@@ -42,6 +42,7 @@ std::string mastercore::strTransactionType(uint16_t txType)
         case GCOIN_TYPE_TEST_CLASS_C: return "Gcoin Test Class C";
         case GCOIN_TYPE_VOTE_FOR_LICENSE: return "Gcoin Vote For License";
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE: return "Gcoin Vote For Alliance";
+        case GCOIN_TYPE_APPLY_ALLIANCE: return "Gcoin Apply Alliance";
         /* original omni */
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
@@ -117,6 +118,9 @@ bool CMPTransaction::interpret_Transaction()
 
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
             return interpret_VoteForAlliance();
+
+        case GCOIN_TYPE_APPLY_ALLIANCE:
+            return interpret_ApplyAlliance();
 
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
@@ -659,7 +663,37 @@ bool CMPTransaction::interpret_Test() {
     return true;
 }
 
-/* Tx 500 */
+/** Tx 400 */
+bool CMPTransaction::interpret_ApplyAlliance() {
+    const char* p = 4 + (char*) &pkt;
+    std::vector<std::string> spstr;
+    for (int i = 0; i < 3; i++) {
+        spstr.push_back(std::string(p));
+        p += spstr.back().size() + 1;
+    }
+    int i = 0;
+    memset(alliance_name, 0, sizeof(alliance_name));
+    memset(alliance_url, 0, sizeof(alliance_url));
+    memset(alliance_data, 0, sizeof(alliance_data));
+    memcpy(alliance_name, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_name)-1)); i++;
+    memcpy(alliance_url, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_url)-1)); i++;
+    memcpy(alliance_data, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_data)-1)); i++;
+
+    if ((!rpcOnly && msc_debug_packets) || msc_debug_packets_readonly) {
+        PrintToLog("\t   Alliance name: %s\n", alliance_name);
+        PrintToLog("\t    Alliance url: %s\n", alliance_url);
+        PrintToLog("\t   Alliance data: %s\n", alliance_data);
+    }
+
+    if (isOverrun(p)) {
+        PrintToLog("%s(): rejected: malformed string value(s)\n", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+/** Tx 500 */
 bool CMPTransaction::interpret_VoteForLicense() {
 
     memcpy(&property, &pkt[4], 4);
@@ -769,6 +803,9 @@ int CMPTransaction::interpretPacket()
 
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
             return logicMath_VoteForAlliance();
+
+        case GCOIN_TYPE_APPLY_ALLIANCE:
+            return logicMath_ApplyAlliance();
 
         case MSC_TYPE_SIMPLE_SEND:
             return logicMath_SimpleSend();
@@ -1977,7 +2014,41 @@ int CMPTransaction::logicMath_ChangeIssuer()
     return 0;
 }
 
-/* Tx 500 */
+/** Tx 400 */
+int CMPTransaction::logicMath_ApplyAlliance() {
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    if (allianceInfoDB->hasAllianceInfo(sender)) {
+        PrintToLog("%s(): ERROR: Address %s has already apply for alliance\n", __func__, sender);
+        return false;
+    }
+
+    // ------------------------------------------
+
+    PrintToLog("%s(): Address %s apply for alliance\n", __func__, sender);
+    AllianceInfo::Entry allianceEntry = allianceInfoDB->allianceInfoEntryBuilder(
+        sender,
+        alliance_name,
+        alliance_url,
+        alliance_data,
+        txid,
+        blockHash);
+    assert(allianceInfoDB->putAllianceInfo(sender, allianceEntry));
+
+    return 0;
+}
+
+/** Tx 500 */
 int CMPTransaction::logicMath_VoteForLicense() {
     printf("%s(): property %d\n", __func__, property);
     PrintToLog("%s(): property %d\n", __func__, property);

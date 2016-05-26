@@ -85,6 +85,29 @@ std::vector<unsigned char> CreatePayload_VoteForAlliance(std::string voteType) {
     return payload;
 }
 
+std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name, std::string url, std::string data)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 400;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder16(messageType);
+    if (alliance_name.size() > 255) alliance_name = alliance_name.substr(0,255);
+    if (url.size() > 255) url = url.substr(0,255);
+    if (data.size() > 255) data = data.substr(0,255);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), alliance_name.begin(), alliance_name.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), url.begin(), url.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+
+    return payload;
+}
+
 std::vector<unsigned char> CreatePayload_SimpleSend(uint32_t propertyId, uint64_t amount)
 {
     std::vector<unsigned char> payload;
