@@ -670,7 +670,7 @@ bool AllianceInfo::putAllianceInfo(std::string address, Entry& info) {
     return status.ok();
 }
 
-AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, std::string name, std::string url,
+AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold, 
                                                            std::string data, uint256 txid, uint256 blockId) {
     AllianceInfo::Entry entry;
     entry.address = address;
@@ -680,6 +680,10 @@ AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, 
     entry.txid = txid;
     entry.creation_block = blockId;
     entry.update_block = blockId;
+    entry.approve_threshold = approve_threshold;
+
+    entry.approve_count = 0;
+    entry.reject_count = 0;
     entry.status = ALLIANCE_INFO_STATUS_PENDING;
 
     return entry;
@@ -790,7 +794,10 @@ void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
             PrintToLog("%s(): ERROR: %s\n", __func__, e.what());
             continue;
         }
-        infoVec.push_back(info);
+        // only return approved alliance
+        if(info.status == ALLIANCE_INFO_STATUS_APPROVED) {
+            infoVec.push_back(info);
+        }
     }
 
     // clean up the iterator
