@@ -116,13 +116,11 @@ bool CMPTransaction::interpret_Transaction()
         case GCOIN_TYPE_VOTE_FOR_LICENSE:
             return interpret_VoteForLicense();
 
-<<<<<<< HEAD
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
             return interpret_VoteForAlliance();
-=======
+
         case GCOIN_TYPE_APPLY_ALLIANCE:
             return interpret_ApplyAlliance();
->>>>>>> Implement tx type 400(Apply Alliance)
 
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
@@ -803,13 +801,11 @@ int CMPTransaction::interpretPacket()
         case GCOIN_TYPE_VOTE_FOR_LICENSE:
             return logicMath_VoteForLicense();
 
-<<<<<<< HEAD
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
             return logicMath_VoteForAlliance();
-=======
+
         case GCOIN_TYPE_APPLY_ALLIANCE:
             return logicMath_ApplyAlliance();
->>>>>>> Implement tx type 400(Apply Alliance)
 
         case MSC_TYPE_SIMPLE_SEND:
             return logicMath_SimpleSend();

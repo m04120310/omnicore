@@ -142,11 +142,8 @@ private:
      */
     // Gcoin usage
     int logicMath_VoteForLicense();
-<<<<<<< HEAD
     int logicMath_VoteForAlliance();
-=======
     int logicMath_ApplyAlliance();
->>>>>>> Implement tx type 400(Apply Alliance)
 
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();
