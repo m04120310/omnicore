@@ -750,8 +750,6 @@ void AllianceInfo::printAll() {
     leveldb::Slice slAllianceKeyPrefix(&ssAllianceKeyPrefix[0], ssAllianceKeyPrefix.size());
 
     for (iter->Seek(slAllianceKeyPrefix); iter->Valid() && iter->key().starts_with(slAllianceKeyPrefix); iter->Next()) {
-        leveldb::Slice slAllianceKey = iter->key();
-
         // deserialize the persisted data
         leveldb::Slice slAllianceValue = iter->value();
         Entry info;
@@ -781,8 +779,6 @@ void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
     leveldb::Slice slAllianceKeyPrefix(&ssAllianceKeyPrefix[0], ssAllianceKeyPrefix.size());
 
     for (iter->Seek(slAllianceKeyPrefix); iter->Valid() && iter->key().starts_with(slAllianceKeyPrefix); iter->Next()) {
-        leveldb::Slice slAllianceKey = iter->key();
-
         // deserialize the persisted data
         leveldb::Slice slAllianceValue = iter->value();
         Entry info;
@@ -830,6 +826,167 @@ bool AllianceInfo::isAllianceApproved(std::string address) {
         return true;
     }
 }
+
+/* Vote Record DB */
+/* key: 
+    address: alliance address.
+    txType: what alliance vote for.
+    voteTarget: vote target, can be either "property id" (vote for license) or "address" (vote for alliance).
+*/
+
+void VoteRecordDB::clear() {
+    // wipe database via parent class
+    CDBBase::Clear();
+    // reset "next property identifiers"
+}
+
+bool VoteRecordDB::updateVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    if (!pdb->Get(readoptions, slVoteRecordKey, &voteType).IsNotFound()) {
+        leveldb::Status status = pdb->Put(writeoptions, slVoteRecordKey, voteType);
+
+        if (!status.ok()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+            return false;
+        }
+    } else {
+        PrintToLog("Attemp to update non-exist alliance.\n");
+        PrintToConsole("Attemp to update non-exist alliance.\n");
+        return false;
+    }
+
+    return true;
+}
+
+bool VoteRecordDB::putVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string voteType) {
+    // key is address
+    // if already exist, change to update.
+    if (!pdb) {
+        return false;
+    }
+    if (hasVoteRecord(address, txType, voteTarget)) {
+        return updateVoteRecord(address, txType, voteTarget, voteType);
+    }
+
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    leveldb::Status status = pdb->Put(writeoptions, slVoteRecordKey, voteType);
+    PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
+    return status.ok();
+}
+
+bool VoteRecordDB::getVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    leveldb::Status status = pdb->Get(readoptions, slVoteRecordKey, &voteType);
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool VoteRecordDB::hasVoteRecord(std::string address, unsigned int txType, std::string voteTarget) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);    
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    // DB value for property entry
+    std::string tmp;
+    leveldb::Status status = pdb->Get(readoptions, slVoteRecordKey, &tmp);
+
+    return status.ok();
+}
+
+void VoteRecordDB::printAll() {
+    leveldb::Iterator* iter = NewIterator();
+
+    CDataStream ssVoteRecordKeyPrefix(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKeyPrefix << 'v';
+    leveldb::Slice slVoteRecordKeyPrefix(&ssVoteRecordKeyPrefix[0], ssVoteRecordKeyPrefix.size());
+
+    for (iter->Seek(slVoteRecordKeyPrefix); iter->Valid() && iter->key().starts_with(slVoteRecordKeyPrefix); iter->Next()) {
+        leveldb::Slice slVoteRecordKey = iter->key();
+
+        // deserialize the persisted data
+        leveldb::Slice slVoteRecordValue = iter->value();
+        PrintToConsole("key: %s, value: %s\n", slVoteRecordKey.ToString(), slVoteRecordValue.ToString());
+    }
+
+    // clean up the iterator
+    delete iter;
+}
+
+bool VoteRecordDB::deleteVoteRecord(std::string address, unsigned int txType, std::string voteTarget) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    if(!hasVoteRecord(address, txType, voteTarget)) {
+        PrintToLog("Delete vote record error. Try to delete non-exist vote record: addr: %s, txType: %d\n", address, txType);
+        return false;
+    }
+
+    leveldb::Status status = pdb->Delete(writeoptions, slVoteRecordKey);
+    return true;
+}
+
+/* End of vote record db*/
 
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
 {

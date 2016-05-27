@@ -135,6 +135,7 @@ CMPTradeList *mastercore::t_tradelistdb;
 CMPSTOList *mastercore::s_stolistdb;
 COmniTransactionDB *mastercore::p_OmniTXDB;
 AllianceInfo *mastercore::allianceInfoDB;
+VoteRecordDB *mastercore::voteRecordDB;
 // indicate whether persistence is enabled at this point, or not
 // used to write/read files, for breakout mode, debugging, etc.
 static bool writePersistence(int block_now)
@@ -1663,111 +1664,110 @@ static char const * const statePrefix[NUM_FILETYPES] = {
 };
 
 // returns the height of the state loaded
-static int load_most_relevant_state()
-{
-  int res = -1;
-  // check the SP database and roll it back to its latest valid state
-  // according to the active chain
-  uint256 spWatermark;
-  if (!_my_sps->getWatermark(spWatermark)) {
-    //trigger a full reparse, if the SP database has no watermark
-    return -1;
-  }
-
-  CBlockIndex const *spBlockIndex = GetBlockIndex(spWatermark);
-  if (NULL == spBlockIndex) {
-    //trigger a full reparse, if the watermark isn't a real block
-    return -1;
-  }
-
-  while (NULL != spBlockIndex && false == chainActive.Contains(spBlockIndex)) {
-    int remainingSPs = _my_sps->popBlock(spBlockIndex->GetBlockHash());
-    if (remainingSPs < 0) {
-      // trigger a full reparse, if the levelDB cannot roll back
-      return -1;
-    } /*else if (remainingSPs == 0) {
-      // potential optimization here?
-    }*/
-    spBlockIndex = spBlockIndex->pprev;
-    if (spBlockIndex != NULL) {
-        _my_sps->setWatermark(spBlockIndex->GetBlockHash());
-    }
-  }
-
-  // prepare a set of available files by block hash pruning any that are
-  // not in the active chain
-  std::set<uint256> persistedBlocks;
-  boost::filesystem::directory_iterator dIter(MPPersistencePath);
-  boost::filesystem::directory_iterator endIter;
-  for (; dIter != endIter; ++dIter) {
-    if (false == boost::filesystem::is_regular_file(dIter->status()) || dIter->path().empty()) {
-      // skip funny business
-      continue;
+static int load_most_relevant_state() {
+    int res = -1;
+    // check the SP database and roll it back to its latest valid state
+    // according to the active chain
+    uint256 spWatermark;
+    if (!_my_sps->getWatermark(spWatermark)) {
+        //trigger a full reparse, if the SP database has no watermark
+        return -1;
     }
 
-    std::string fName = (*--dIter->path().end()).string();
-    std::vector<std::string> vstr;
-    boost::split(vstr, fName, boost::is_any_of("-."), token_compress_on);
-    if (  vstr.size() == 3 &&
-          boost::equals(vstr[2], "dat")) {
-      uint256 blockHash;
-      blockHash.SetHex(vstr[1]);
-      CBlockIndex *pBlockIndex = GetBlockIndex(blockHash);
-      if (pBlockIndex == NULL || false == chainActive.Contains(pBlockIndex)) {
-        continue;
-      }
-
-      // this is a valid block in the active chain, store it
-      persistedBlocks.insert(blockHash);
+    CBlockIndex const *spBlockIndex = GetBlockIndex(spWatermark);
+    if (NULL == spBlockIndex) {
+        //trigger a full reparse, if the watermark isn't a real block
+        return -1;
     }
-  }
 
-  // using the SP's watermark after its fixed-up as the tip
-  // walk backwards until we find a valid and full set of persisted state files
-  // for each block we discard, roll back the SP database
-  // Note: to avoid rolling back all the way to the genesis block (which appears as if client is hung) abort after MAX_STATE_HISTORY attempts
-  CBlockIndex const *curTip = spBlockIndex;
-  int abortRollBackBlock;
-  if (curTip != NULL) abortRollBackBlock = curTip->nHeight - (MAX_STATE_HISTORY+1);
-  while (NULL != curTip && persistedBlocks.size() > 0 && curTip->nHeight > abortRollBackBlock) {
-    if (persistedBlocks.find(spBlockIndex->GetBlockHash()) != persistedBlocks.end()) {
-      int success = -1;
-      for (int i = 0; i < NUM_FILETYPES; ++i) {
-        boost::filesystem::path path = MPPersistencePath / strprintf("%s-%s.dat", statePrefix[i], curTip->GetBlockHash().ToString());
-        const std::string strFile = path.string();
-        success = msc_file_load(strFile, i, true);
-        if (success < 0) {
-          break;
+    while (NULL != spBlockIndex && false == chainActive.Contains(spBlockIndex)) {
+        int remainingSPs = _my_sps->popBlock(spBlockIndex->GetBlockHash());
+        if (remainingSPs < 0) {
+          // trigger a full reparse, if the levelDB cannot roll back
+          return -1;
+        } /*else if (remainingSPs == 0) {
+          // potential optimization here?
+        }*/
+        spBlockIndex = spBlockIndex->pprev;
+        if (spBlockIndex != NULL) {
+            _my_sps->setWatermark(spBlockIndex->GetBlockHash());
         }
-      }
-
-      if (success >= 0) {
-        res = curTip->nHeight;
-        break;
-      }
-
-      // remove this from the persistedBlock Set
-      persistedBlocks.erase(spBlockIndex->GetBlockHash());
     }
 
-    // go to the previous block
-    if (0 > _my_sps->popBlock(curTip->GetBlockHash())) {
-      // trigger a full reparse, if the levelDB cannot roll back
-      return -1;
-    }
-    curTip = curTip->pprev;
-    if (curTip != NULL) {
-        _my_sps->setWatermark(curTip->GetBlockHash());
-    }
-  }
+    // prepare a set of available files by block hash pruning any that are
+    // not in the active chain
+    std::set<uint256> persistedBlocks;
+    boost::filesystem::directory_iterator dIter(MPPersistencePath);
+    boost::filesystem::directory_iterator endIter;
+    for (; dIter != endIter; ++dIter) {
+        if (false == boost::filesystem::is_regular_file(dIter->status()) || dIter->path().empty()) {
+          // skip funny business
+          continue;
+        }
 
-  if (persistedBlocks.size() == 0) {
-    // trigger a reparse if we exhausted the persistence files without success
-    return -1;
-  }
+        std::string fName = (*--dIter->path().end()).string();
+        std::vector<std::string> vstr;
+        boost::split(vstr, fName, boost::is_any_of("-."), token_compress_on);
+        if (  vstr.size() == 3 &&
+              boost::equals(vstr[2], "dat")) {
+          uint256 blockHash;
+          blockHash.SetHex(vstr[1]);
+          CBlockIndex *pBlockIndex = GetBlockIndex(blockHash);
+          if (pBlockIndex == NULL || false == chainActive.Contains(pBlockIndex)) {
+            continue;
+          }
 
-  // return the height of the block we settled at
-  return res;
+          // this is a valid block in the active chain, store it
+          persistedBlocks.insert(blockHash);
+        }
+    }
+
+    // using the SP's watermark after its fixed-up as the tip
+    // walk backwards until we find a valid and full set of persisted state files
+    // for each block we discard, roll back the SP database
+    // Note: to avoid rolling back all the way to the genesis block (which appears as if client is hung) abort after MAX_STATE_HISTORY attempts
+    CBlockIndex const *curTip = spBlockIndex;
+    int abortRollBackBlock;
+    if (curTip != NULL) 
+        abortRollBackBlock = curTip->nHeight - (MAX_STATE_HISTORY+1);
+    while (NULL != curTip && persistedBlocks.size() > 0 && curTip->nHeight > abortRollBackBlock) {
+        if (persistedBlocks.find(spBlockIndex->GetBlockHash()) != persistedBlocks.end()) {
+          int success = -1;
+          for (int i = 0; i < NUM_FILETYPES; ++i) {
+            boost::filesystem::path path = MPPersistencePath / strprintf("%s-%s.dat", statePrefix[i], curTip->GetBlockHash().ToString());
+            const std::string strFile = path.string();
+            success = msc_file_load(strFile, i, true);
+            if (success < 0) {
+              break;
+            }
+          }
+
+          if (success >= 0) {
+            res = curTip->nHeight;
+            break;
+          }
+
+          // remove this from the persistedBlock Set
+          persistedBlocks.erase(spBlockIndex->GetBlockHash());
+        }
+
+        // go to the previous block
+        if (0 > _my_sps->popBlock(curTip->GetBlockHash())) {
+          // trigger a full reparse, if the levelDB cannot roll back
+          return -1;
+        }
+        curTip = curTip->pprev;
+        if (curTip != NULL) {
+            _my_sps->setWatermark(curTip->GetBlockHash());
+        }
+    }
+
+    if (persistedBlocks.size() == 0) {
+        // trigger a reparse if we exhausted the persistence files without success
+        return -1;
+    }
+
+    return res;
 }
 
 static int write_msc_balances(std::ofstream& file, SHA256_CTX* shaCtx)
@@ -2125,9 +2125,14 @@ int mastercore_init() {
     p_OmniTXDB = new COmniTransactionDB(GetDataDir() / "Omni_TXDB", fReindex);
 
     // Alliance info
-    printf("init alliance info db\n");
+    PrintToConsole("init alliance info db\n");
     allianceInfoDB = new AllianceInfo(GetDataDir() / "AllianceInfoDB", fReindex);
     allianceInfoDB->printAll();
+
+    // Vote record db
+    PrintToConsole("init vote info db\n");
+    voteRecordDB = new VoteRecordDB(GetDataDir() / "VoteRecordDB", fReindex);
+    voteRecordDB->printAll();
 
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);

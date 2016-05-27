@@ -2058,8 +2058,8 @@ int CMPTransaction::logicMath_ApplyAlliance() {
 
 /** Tx 500 */
 int CMPTransaction::logicMath_VoteForLicense() {
-    printf("%s(): property %d\n", __func__, property);
-    PrintToLog("%s(): property %d\n", __func__, property);
+    printf("%s(): property %u\n", __func__, property);
+    PrintToLog("%s(): property %u\n", __func__, property);
 
     if (OMNI_PROPERTY_MSC == property || OMNI_PROPERTY_TMSC == property) {
         return false;
@@ -2092,16 +2092,34 @@ int CMPTransaction::logicMath_VoteForLicense() {
     CMPSPInfo::Entry sp;
     assert(_my_sps->getSP(property, sp));
 
-    // compare 'voteType': approve or reject
-    // and set the approve_count and reject_count
-    if (strcmp(voteType, "approve") == 0) {
-        PrintToLog("%s(): Vote for approve\n", __func__);
-        sp.approve_count += 1;
+    // Prepare property id string
+    std::string propertyIdString;
+    char tmp[20];
+    snprintf(tmp, sizeof(tmp), "%u", property);
+    propertyIdString.append(tmp);
+
+    std::string voteTypeString(voteType);
+    // If this is a new vote
+    if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
+        // compare 'voteType': approve or reject
+        // and set the approve_count and reject_count
+        if (strcmp(voteType, "approve") == 0) {
+            PrintToLog("%s(): Vote for approve\n", __func__);
+            sp.approve_count += 1;
+        }
+        else if (strcmp(voteType, "reject") == 0) {
+            sp.reject_count += 1;
+            PrintToLog("%s(): Vote for reject\n", __func__);
+        }
+
+    } else { // If this is a dupilcate vote
+        PrintToLog("This alliance %s has already voted for the property: %d.\n", sender, property);
+        PrintToConsole("This alliance %s has already voted for the property: %d.\n", sender, property);
+        return false;
     }
-    else if (strcmp(voteType, "reject") == 0) {
-        sp.reject_count += 1;
-        PrintToLog("%s(): Vote for reject\n", __func__);
-    }
+
+    // Store/update this vote into db
+    voteRecordDB->putVoteRecord(sender, 54, propertyIdString, voteTypeString);
 
     // Save Updated SP to DB
     assert(_my_sps->updateSP(property, sp));
@@ -2142,27 +2160,44 @@ int CMPTransaction::logicMath_VoteForAlliance() {
         return false;
     }
 
+
     AllianceInfo::Entry votedAllianceInfo;
     assert(allianceInfoDB->getAllianceInfo(receiver, votedAllianceInfo));
 
-    // compare 'voteType': approve or reject
-    // and set the approve_count and reject_count
-    if (strcmp(voteType, "approve") == 0) {
-        PrintToLog("%s(): Vote for approve\n", __func__);
-        PrintToConsole("%s(): Vote for approve\n", __func__);
-        votedAllianceInfo.approve_count += 1;
-        if (votedAllianceInfo.approve_count >= votedAllianceInfo.approve_threshold) {
-            votedAllianceInfo.status = AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED;
+    std::string voteTypeString(voteType);
+    // If this is a new vote
+    if (!voteRecordDB->hasVoteRecord(sender, 400, receiver)) {
+        // compare 'voteType': approve or reject
+        // and set the approve_count and reject_count
+        if (strcmp(voteType, "approve") == 0) {
+            PrintToLog("%s(): Vote for approve\n", __func__);
+            PrintToConsole("%s(): Vote for approve\n", __func__);
+            votedAllianceInfo.approve_count += 1;
         }
+        else if (strcmp(voteType, "reject") == 0) {
+            votedAllianceInfo.reject_count += 1;
+            PrintToLog("%s(): Vote for reject\n", __func__);
+            PrintToConsole("%s(): Vote for reject\n", __func__);
+        }
+    } else { // If this is a dupilcate vote
+        PrintToLog("This alliance %s has already voted for this appliance(%s).\n", sender, receiver);
+        PrintToConsole("This alliance %s has already voted for this appliance(%s).\n", sender, receiver);
+        return false;
     }
-    else if (strcmp(voteType, "reject") == 0) {
-        votedAllianceInfo.reject_count += 1;
-        PrintToLog("%s(): Vote for reject\n", __func__);
-        PrintToConsole("%s(): Vote for reject\n", __func__);
+
+    /* TODO: may have to deal with rejected situation. */
+    if (votedAllianceInfo.approve_count >= votedAllianceInfo.approve_threshold) {
+        votedAllianceInfo.status = AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED;
+    } else {
+        votedAllianceInfo.status = AllianceInfo::ALLIANCE_INFO_STATUS_PENDING;
     }
+
+    // Store/update this vote into db
+    voteRecordDB->putVoteRecord(sender, 400, receiver, voteTypeString);
 
     // Save Updated alliance info to DB
     assert(allianceInfoDB->updateAllianceInfo(receiver, votedAllianceInfo));
+
     PrintToLog("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
     PrintToConsole("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
     PrintToLog("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);

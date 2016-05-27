@@ -214,7 +214,6 @@ public:
 };
 
 // Alliance DB
-
 class AllianceInfo : public CDBBase {
 public:
     static const unsigned int ALLIANCE_INFO_STATUS_APPROVED = 0;
@@ -290,11 +289,31 @@ public:
 
     void printAll();
 };
-/*
-unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED = 0;
-unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_PENDING = 1;
-unsigned int AllianceInfo::ALLIANCE_INFO_STATUS_REJECTED = 2;
-*/
+
+
+// Vote record DB
+class VoteRecordDB : public CDBBase {
+public:
+    VoteRecordDB(const boost::filesystem::path& path, bool fWipe) {
+        leveldb::Status status = Open(path, fWipe);
+        PrintToConsole("Loading vote record database: %s\n", status.ToString());
+    }
+
+    virtual ~VoteRecordDB() {
+        if (msc_debug_persistence)
+            PrintToLog("VoteRecordDB is closed\n");
+    }
+    void clear();
+    bool updateVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType);
+    bool putVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string voteType);
+    bool getVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType);
+    bool hasVoteRecord(std::string address, unsigned int txType, std::string voteTarget);
+    bool deleteVoteRecord(std::string address, unsigned int txType, std::string voteTarget);
+
+    void printAll();
+};
+
+
 namespace mastercore
 {
 typedef std::map<std::string, CMPCrowd> CrowdMap;
@@ -302,6 +321,7 @@ typedef std::map<std::string, CMPCrowd> CrowdMap;
 extern CMPSPInfo* _my_sps;
 extern CrowdMap my_crowds;
 extern AllianceInfo* allianceInfoDB;
+extern VoteRecordDB* voteRecordDB;
 
 std::string strPropertyType(uint16_t propertyType);
 std::string strEcosystem(uint8_t ecosystem);
