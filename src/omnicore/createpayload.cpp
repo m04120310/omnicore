@@ -90,14 +90,22 @@ std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name
     std::vector<unsigned char> payload;
     uint16_t messageType = 400;
     uint16_t messageVer = 0;
+
+    // get all alliances info and the alliances number
+    std::vector<AllianceInfo::Entry> infoVec;
+    mastercore::allianceInfoDB->getAllAllianceInfo(infoVec);
+    uint16_t approveThreshold = uint16_t (round(infoVec.size() * ALLIANCE_APPROVE_PERCENTAGE));
+
     mastercore::swapByteOrder16(messageVer);
     mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(approveThreshold);
     if (alliance_name.size() > 255) alliance_name = alliance_name.substr(0,255);
     if (url.size() > 255) url = url.substr(0,255);
     if (data.size() > 255) data = data.substr(0,255);
 
     PUSH_BACK_BYTES(payload, messageVer);
     PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, approveThreshold);
     payload.insert(payload.end(), alliance_name.begin(), alliance_name.end());
     payload.push_back('\0');
     payload.insert(payload.end(), url.begin(), url.end());

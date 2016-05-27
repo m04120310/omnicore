@@ -665,7 +665,11 @@ bool CMPTransaction::interpret_Test() {
 
 /** Tx 400 */
 bool CMPTransaction::interpret_ApplyAlliance() {
-    const char* p = 4 + (char*) &pkt;
+    // Get approve_threshold
+    memcpy(&approve_threshold, &pkt[4], 2);
+    swapByteOrder16(approve_threshold);
+
+    const char* p = 6 + (char*) &pkt;
     std::vector<std::string> spstr;
     for (int i = 0; i < 3; i++) {
         spstr.push_back(std::string(p));
@@ -680,6 +684,7 @@ bool CMPTransaction::interpret_ApplyAlliance() {
     memcpy(alliance_data, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_data)-1)); i++;
 
     if ((!rpcOnly && msc_debug_packets) || msc_debug_packets_readonly) {
+        PrintToLog("\t   approve_threshold: %d\n", approve_threshold);
         PrintToLog("\t   Alliance name: %s\n", alliance_name);
         PrintToLog("\t    Alliance url: %s\n", alliance_url);
         PrintToLog("\t   Alliance data: %s\n", alliance_data);
@@ -2030,17 +2035,20 @@ int CMPTransaction::logicMath_ApplyAlliance() {
 
     if (allianceInfoDB->hasAllianceInfo(sender)) {
         PrintToLog("%s(): ERROR: Address %s has already apply for alliance\n", __func__, sender);
+        PrintToConsole("%s(): ERROR: Address %s has already apply for alliance\n", __func__, sender);
         return false;
     }
 
     // ------------------------------------------
 
     PrintToLog("%s(): Address %s apply for alliance\n", __func__, sender);
+    PrintToConsole("%s(): Address %s apply for alliance\n", __func__, sender);
     AllianceInfo::Entry allianceEntry = allianceInfoDB->allianceInfoEntryBuilder(
         sender,
         alliance_name,
         alliance_url,
-        alliance_data,
+        approve_threshold,
+        alliance_data, 
         txid,
         blockHash);
     assert(allianceInfoDB->putAllianceInfo(sender, allianceEntry));
@@ -2103,9 +2111,63 @@ int CMPTransaction::logicMath_VoteForLicense() {
     return 0;
 }
 
-/* Tx 500 */
+/* Tx  */
 int CMPTransaction::logicMath_VoteForAlliance() {
-    PrintToConsole("%s()\n", __func__);
+    PrintToConsole("%s(): sender: %s, receiver: %s\n", __func__, sender, receiver);
+    PrintToLog("%s(): sender: %s, receiver: %s\n", __func__, sender, receiver);
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare sender with Alliance
+    if (!allianceInfoDB->isAllianceApproved(sender)) {
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        PrintToConsole("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
+    // compare voted address 
+    if (!allianceInfoDB->hasAllianceInfo(receiver)) {
+        PrintToLog("%s(): rejected: voted address %s does not exist\n", __func__, receiver);
+        PrintToConsole("%s(): rejected: voted address %s does not exist\n", __func__, receiver);
+        return false;
+    }
+
+    AllianceInfo::Entry votedAllianceInfo;
+    assert(allianceInfoDB->getAllianceInfo(receiver, votedAllianceInfo));
+
+    // compare 'voteType': approve or reject
+    // and set the approve_count and reject_count
+    if (strcmp(voteType, "approve") == 0) {
+        PrintToLog("%s(): Vote for approve\n", __func__);
+        PrintToConsole("%s(): Vote for approve\n", __func__);
+        votedAllianceInfo.approve_count += 1;
+        if (votedAllianceInfo.approve_count >= votedAllianceInfo.approve_threshold) {
+            votedAllianceInfo.status = AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED;
+        }
+    }
+    else if (strcmp(voteType, "reject") == 0) {
+        votedAllianceInfo.reject_count += 1;
+        PrintToLog("%s(): Vote for reject\n", __func__);
+        PrintToConsole("%s(): Vote for reject\n", __func__);
+    }
+
+    // Save Updated alliance info to DB
+    assert(allianceInfoDB->updateAllianceInfo(receiver, votedAllianceInfo));
+    PrintToLog("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
+    PrintToConsole("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
+    PrintToLog("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);
+    PrintToConsole("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);
+
     return 0;
 }
 

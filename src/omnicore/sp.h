@@ -231,6 +231,11 @@ public:
         uint256 creation_block;
         uint256 update_block;
 
+        // For Alliance vote result
+        uint16_t approve_threshold;
+        uint16_t approve_count;
+        uint16_t reject_count;
+
         // status
         unsigned int status;
 
@@ -247,6 +252,9 @@ public:
             READWRITE(creation_block);
             READWRITE(update_block);
             READWRITE(status);
+            READWRITE(approve_threshold);
+            READWRITE(approve_count);
+            READWRITE(reject_count);
         }
 
         void print();
@@ -270,7 +278,7 @@ public:
 
     void init();
     void clear();
-    static Entry allianceInfoEntryBuilder(std::string address, std::string name, std::string url,
+    static Entry allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold, 
                                  std::string data, uint256 txid, uint256 blockId);
     bool updateAllianceInfo(std::string address, Entry& info);
     bool putAllianceInfo(std::string address, Entry& info);
