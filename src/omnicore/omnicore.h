@@ -64,6 +64,7 @@ int const MAX_STATE_HISTORY = 50;
 // Gcoin license's threshold percentage(approve vote from alliances)
 #define LICENSE_APPROVE_PERCENTAGE 2.0/3.0
 #define ALLIANCE_APPROVE_PERCENTAGE 2.0/3.0
+#define GCOIN_FEATURE_START_BLOCK_HEIGHT 867890
 
 // Transaction types, from the spec
 enum TransactionType {
