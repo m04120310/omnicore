@@ -570,21 +570,20 @@ CMPCrowd* mastercore::getCrowd(const std::string& address)
 // Alliance related
 
 void AllianceInfo::Entry::print() {
-    PrintToConsole("\n\taddress: %s\n\tname: %s\n\turl: %s\n\tdata: %s\n", address, name, url, data);
-    PrintToConsole("alliance status: ");
+    PrintToConsole("\n\taddress: %s\n\tname: %s\n\turl: %s\n\tdata: %s\n\talliance status: %s\n", address, name, url, data, getStatusString());
+}
+
+std::string AllianceInfo::Entry::getStatusString() {
     switch(status) {
-       case ALLIANCE_INFO_STATUS_APPROVED:
-           PrintToConsole("ALLIANCE_INFO_STATUS_APPROVED\n");
-           break;
-       case ALLIANCE_INFO_STATUS_PENDING:
-           PrintToConsole("ALLIANCE_INFO_STATUS_PENDING\n");
-           break;
-       case ALLIANCE_INFO_STATUS_REJECTED:
-           PrintToConsole("ALLIANCE_INFO_STATUS_REJECTED\n");
-           break;
-       default:
-           PrintToConsole("Invalid status.\n");
-       }
+        case ALLIANCE_INFO_STATUS_APPROVED:
+            return "Approved";
+        case ALLIANCE_INFO_STATUS_PENDING:
+            return "Pending";
+        case ALLIANCE_INFO_STATUS_REJECTED:
+            return "Rejected";
+        default:
+            return "Status error";
+    }
 }
 
 void AllianceInfo::clear() {
@@ -790,10 +789,8 @@ void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
             PrintToLog("%s(): ERROR: %s\n", __func__, e.what());
             continue;
         }
-        // only return approved alliance
-        if(info.status == ALLIANCE_INFO_STATUS_APPROVED) {
-            infoVec.push_back(info);
-        }
+        
+        infoVec.push_back(info);
     }
 
     // clean up the iterator

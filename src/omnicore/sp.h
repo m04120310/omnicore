@@ -257,6 +257,7 @@ public:
         }
 
         void print();
+        std::string getStatusString();
     };
 
 private:
