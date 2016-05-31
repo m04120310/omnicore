@@ -74,11 +74,12 @@ void PopulateFailure(int error)
     throw JSONRPCError(RPC_INTERNAL_ERROR, "Generic transaction population failure");
 }
 
-void AllianceToJSON(const AllianceInfo::Entry& entry, Object& alliance_obj) {
+void AllianceToJSON(AllianceInfo::Entry& entry, Object& alliance_obj) {
     alliance_obj.push_back(Pair("address", entry.address));
     alliance_obj.push_back(Pair("name", entry.name));
     alliance_obj.push_back(Pair("data", entry.data));
     alliance_obj.push_back(Pair("url", entry.url));
+    alliance_obj.push_back(Pair("status", entry.getStatusString()));
 }
 
 void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
@@ -153,7 +154,6 @@ bool BalanceToJSON(const std::string& address, uint32_t property, Object& balanc
         return true;
     }
 }
-
 
 // Show alliance list
 Value gcoin_get_alliance_info_list(const Array& params, bool fHelp) {
