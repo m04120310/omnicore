@@ -23,6 +23,7 @@
 #include "leveldb/write_batch.h"
 
 #include <stdint.h>
+#include <math.h>
 
 #include <map>
 #include <string>
@@ -795,6 +796,21 @@ void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
 
     // clean up the iterator
     delete iter;
+}
+
+uint16_t AllianceInfo::getApproveThreshold() {
+    // get all alliances info and the alliances number
+    std::vector<Entry> infoVec;
+    getAllAllianceInfo(infoVec);
+    uint16_t approveThreshold = 0;
+    for(unsigned int i=0; i<infoVec.size(); i++) {
+        if(infoVec[i].status == ALLIANCE_INFO_STATUS_APPROVED) {
+            approveThreshold++;
+        }
+    }
+    approveThreshold = uint16_t (round(approveThreshold * LICENSE_APPROVE_PERCENTAGE));
+
+    return approveThreshold;
 }
 
 bool AllianceInfo::deleteAllianceInfo(std::string address) {
