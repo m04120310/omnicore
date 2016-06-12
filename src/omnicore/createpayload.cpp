@@ -11,7 +11,6 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <math.h>
 
 /**
  * Pushes bytes to the end of a vector.
@@ -92,15 +91,7 @@ std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name
     uint16_t messageVer = 0;
 
     // get all alliances info and the alliances number
-    std::vector<AllianceInfo::Entry> infoVec;
-    mastercore::allianceInfoDB->getAllAllianceInfo(infoVec);
-    uint16_t approveThreshold = 0;
-    for(int i=0; i<infoVec.size(); i++) {
-        if(infoVec[i].status == AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED) {
-            approveThreshold++;
-        }
-    }
-    approveThreshold = uint16_t (round(approveThreshold * LICENSE_APPROVE_PERCENTAGE));
+    uint16_t approveThreshold = mastercore::allianceInfoDB->getApproveThreshold();
     PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
     PrintToConsole("%s(): approveThreshold = %d\n", __func__, approveThreshold);
 
@@ -306,15 +297,7 @@ std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint
     uint16_t messageVer = 0;
 
     // get all alliances info and the alliances number
-    std::vector<AllianceInfo::Entry> infoVec;
-    mastercore::allianceInfoDB->getAllAllianceInfo(infoVec);
-    uint16_t approveThreshold = 0;
-    for(int i=0; i<infoVec.size(); i++) {
-        if(infoVec[i].status == AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED) {
-            approveThreshold++;
-        }
-    }
-    approveThreshold = uint16_t (round(approveThreshold * LICENSE_APPROVE_PERCENTAGE));
+    uint16_t approveThreshold = mastercore::allianceInfoDB->getApproveThreshold();
     PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
     PrintToConsole("%s(): approveThreshold = %d\n", __func__, approveThreshold);
 

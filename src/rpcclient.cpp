@@ -235,7 +235,6 @@ public:
     CRPCConvertTable();
 
     bool convert(const std::string& method, int idx) {
-        printf("method: %s\n", method.c_str());
         return (members.count(std::make_pair(method, idx)) > 0);
     }
 };
@@ -257,9 +256,7 @@ static CRPCConvertTable rpcCvtTable;
 Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)
 {
     Array params;
-    printf("RPCConvertValues strMethod:%s\n", strMethod.c_str());
     for (unsigned int idx = 0; idx < strParams.size(); idx++) {
-        printf("strParams: %s\n", strParams[idx].c_str());
         const std::string& strVal = strParams[idx];
 
         // insert string value directly

@@ -287,6 +287,7 @@ public:
     void getAllAllianceInfo(std::vector<Entry>& infoVec);
     bool deleteAllianceInfo(std::string address);
     bool isAllianceApproved(std::string address);
+    uint16_t getApproveThreshold();
 
     void printAll();
 };
