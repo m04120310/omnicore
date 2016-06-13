@@ -2099,17 +2099,23 @@ int CMPTransaction::logicMath_VoteForLicense() {
     propertyIdString.append(tmp);
 
     std::string voteTypeString(voteType);
+    uint32_t weightedVote = 1;
+    if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+        weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
+    } 
     // If this is a new vote
     if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
         // compare 'voteType': approve or reject
         // and set the approve_count and reject_count
         if (strcmp(voteType, "approve") == 0) {
+            sp.approve_count += weightedVote;
             PrintToLog("%s(): Vote for approve\n", __func__);
-            sp.approve_count += 1;
+            PrintToConsole("%s(): Vote for approve\n", __func__);
         }
         else if (strcmp(voteType, "reject") == 0) {
-            sp.reject_count += 1;
+            sp.reject_count += weightedVote;
             PrintToLog("%s(): Vote for reject\n", __func__);
+            PrintToConsole("%s(): Vote for reject\n", __func__);
         }
 
     } else { // If this is a dupilcate vote
@@ -2165,17 +2171,21 @@ int CMPTransaction::logicMath_VoteForAlliance() {
     assert(allianceInfoDB->getAllianceInfo(receiver, votedAllianceInfo));
 
     std::string voteTypeString(voteType);
+    uint32_t weightedVote = 1;
+    if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+        weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
+    } 
     // If this is a new vote
     if (!voteRecordDB->hasVoteRecord(sender, 400, receiver)) {
         // compare 'voteType': approve or reject
         // and set the approve_count and reject_count
         if (strcmp(voteType, "approve") == 0) {
+            votedAllianceInfo.approve_count += weightedVote;
             PrintToLog("%s(): Vote for approve\n", __func__);
             PrintToConsole("%s(): Vote for approve\n", __func__);
-            votedAllianceInfo.approve_count += 1;
         }
         else if (strcmp(voteType, "reject") == 0) {
-            votedAllianceInfo.reject_count += 1;
+            votedAllianceInfo.reject_count += weightedVote;
             PrintToLog("%s(): Vote for reject\n", __func__);
             PrintToConsole("%s(): Vote for reject\n", __func__);
         }
