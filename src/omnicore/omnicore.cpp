@@ -3693,7 +3693,7 @@ int mastercore_handler_block_end(int nBlockNow, CBlockIndex const * pBlockIndex,
 
     if (msc_debug_exo) {
         int64_t balance = getMPbalance(exodus_address, OMNI_PROPERTY_MSC, BALANCE);
-        PrintToLog("devmsc for block %d: %d, Exodus balance: %d\n", nBlockNow, devmsc, FormatMP(OMNI_PROPERTY_MSC, exodus_balance)));
+        PrintToLog("devmsc for block %d: %d, Exodus balance: %d\n", nBlockNow, devmsc, FormatMP(OMNI_PROPERTY_MSC, balance));
     }
 
     // check the alert status, do we need to do anything else here?
