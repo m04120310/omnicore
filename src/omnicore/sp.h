@@ -138,8 +138,8 @@ public:
 
 private:
     // implied version of OMNI and TOMNI so they don't hit the leveldb
-    Entry implied_omni;
-    Entry implied_tomni;
+    Entry implied_reward_token;
+    Entry implied_test_reward_token;
 
     uint32_t next_spid;
     uint32_t next_test_spid;
@@ -231,9 +231,9 @@ public:
         uint256 update_block;
 
         // For Alliance vote result
-        uint16_t approve_threshold;
-        uint16_t approve_count;
-        uint16_t reject_count;
+        uint32_t approve_threshold;
+        uint32_t approve_count;
+        uint32_t reject_count;
 
         // status
         unsigned int status;
@@ -287,7 +287,7 @@ public:
     void getAllAllianceInfo(std::vector<Entry>& infoVec);
     bool deleteAllianceInfo(std::string address);
     bool isAllianceApproved(std::string address);
-    uint16_t getApproveThreshold();
+    uint32_t getApproveThreshold();
 
     void printAll();
 };

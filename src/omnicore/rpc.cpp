@@ -86,6 +86,7 @@ void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
 {
     property_obj.push_back(Pair("name", sProperty.name));
     property_obj.push_back(Pair("category", sProperty.category));
+    property_obj.push_back(Pair("num_tokens", sProperty.num_tokens));
     property_obj.push_back(Pair("subcategory", sProperty.subcategory));
     property_obj.push_back(Pair("data", sProperty.data));
     property_obj.push_back(Pair("url", sProperty.url));

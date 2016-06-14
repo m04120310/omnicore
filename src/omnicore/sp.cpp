@@ -67,22 +67,31 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     PrintToConsole("Loading smart property database: %s\n", status.ToString());
 
     // special cases for constant SPs OMNI and TOMNI
-    implied_omni.issuer = ExodusAddress().ToString();
-    implied_omni.prop_type = MSC_PROPERTY_TYPE_DIVISIBLE;
-    implied_omni.num_tokens = 700000;
-    implied_omni.category = "N/A";
-    implied_omni.subcategory = "N/A";
-    implied_omni.name = "Omni";
-    implied_omni.url = "http://www.omnilayer.org";
-    implied_omni.data = "Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
-    implied_tomni.issuer = ExodusAddress().ToString();
-    implied_tomni.prop_type = MSC_PROPERTY_TYPE_DIVISIBLE;
-    implied_tomni.num_tokens = 700000;
-    implied_tomni.category = "N/A";
-    implied_tomni.subcategory = "N/A";
-    implied_tomni.name = "Test Omni";
-    implied_tomni.url = "http://www.omnilayer.org";
-    implied_tomni.data = "Test Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
+    implied_reward_token.issuer = ExodusAddress().ToString();
+    implied_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
+    implied_reward_token.num_tokens = 100;
+    implied_reward_token.category = "N/A";
+    implied_reward_token.subcategory = "N/A";
+    implied_reward_token.name = "Reward token";
+    implied_reward_token.url = "";
+    implied_reward_token.data = "Reward token demo.";
+    implied_reward_token.approve_threshold = 1;
+    implied_reward_token.manual = true;
+    implied_reward_token.approve_count = 1;
+    implied_reward_token.reject_count = 0; 
+
+    implied_test_reward_token.issuer = ExodusAddress().ToString();
+    implied_test_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
+    implied_test_reward_token.num_tokens = 100;
+    implied_test_reward_token.category = "N/A";
+    implied_test_reward_token.subcategory = "N/A";
+    implied_test_reward_token.name = "Reward token";
+    implied_test_reward_token.url = "";
+    implied_test_reward_token.data = "Reward token demo.";
+    implied_test_reward_token.manual = true;
+    implied_test_reward_token.approve_threshold = 1;
+    implied_test_reward_token.approve_count = 1;
+    implied_test_reward_token.reject_count = 0; 
     init();
 }
 
@@ -238,10 +247,10 @@ bool CMPSPInfo::getSP(uint32_t propertyId, Entry& info) const
 {
     // special cases for constant SPs MSC and TMSC
     if (OMNI_PROPERTY_MSC == propertyId) {
-        info = implied_omni;
+        info = implied_reward_token;
         return true;
     } else if (OMNI_PROPERTY_TMSC == propertyId) {
-        info = implied_tomni;
+        info = implied_test_reward_token;
         return true;
     }
 
@@ -798,17 +807,22 @@ void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
     delete iter;
 }
 
-uint16_t AllianceInfo::getApproveThreshold() {
+uint32_t AllianceInfo::getApproveThreshold() {
     // get all alliances info and the alliances number
     std::vector<Entry> infoVec;
     getAllAllianceInfo(infoVec);
-    uint16_t approveThreshold = 0;
-    for(unsigned int i=0; i<infoVec.size(); i++) {
-        if(infoVec[i].status == ALLIANCE_INFO_STATUS_APPROVED) {
-            approveThreshold++;
+    uint32_t approveThreshold = 0;
+    for (unsigned int i=0; i<infoVec.size(); i++) {
+        if (infoVec[i].status == ALLIANCE_INFO_STATUS_APPROVED) {
+            if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+                int64_t balance = getMPbalance(infoVec[i].address, OMNI_PROPERTY_MSC, BALANCE);
+                approveThreshold += (uint32_t) balance;
+            } else {
+                approveThreshold += 1;
+            }
         }
     }
-    approveThreshold = uint16_t (round(approveThreshold * LICENSE_APPROVE_PERCENTAGE));
+    approveThreshold = uint32_t (round(approveThreshold * LICENSE_APPROVE_PERCENTAGE));
 
     return approveThreshold;
 }

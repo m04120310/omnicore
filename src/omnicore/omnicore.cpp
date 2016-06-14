@@ -1284,6 +1284,11 @@ static int msc_initial_scan(int nFirstBlock)
     // check if using seed block filter should be disabled
     bool seedBlockFilterEnabled = GetBoolArg("-omniseedblockfilter", true);
 
+    // init reward token if scan from genesis block
+    if(nFirstBlock == GCOIN_FEATURE_START_BLOCK_HEIGHT) {
+        update_tally_map(exodus_address, OMNI_PROPERTY_MSC, GCOIN_REWARD_TOKEN_INIT_AMOUNT, BALANCE);
+    }
+    
     for (nBlock = nFirstBlock; nBlock <= nLastBlock; ++nBlock)
     {
         if (ShutdownRequested()) {
@@ -2193,9 +2198,9 @@ int mastercore_init() {
     // display Exodus balance
     printf("exodus_balance: %s\n", exodus_address.c_str());
     int64_t exodus_balance = getMPbalance(exodus_address, OMNI_PROPERTY_MSC, BALANCE);
-    PrintToLog("Exodus balance after initialization: %s\n", FormatDivisibleMP(exodus_balance));
+    PrintToLog("Exodus balance after initialization: %s\n", FormatMP(OMNI_PROPERTY_MSC, exodus_balance));
 
-    PrintToConsole("Exodus balance: %s OMNI\n", FormatDivisibleMP(exodus_balance));
+    PrintToConsole("Exodus balance: %s OMNI\n", FormatMP(OMNI_PROPERTY_MSC, exodus_balance));
     PrintToConsole("Omni Core initialization completed\n");
 
     return 0;
@@ -3684,11 +3689,11 @@ int mastercore_handler_block_end(int nBlockNow, CBlockIndex const * pBlockIndex,
     }
 
     // calculate devmsc as of this block and update the Exodus' balance
-    devmsc = calculate_and_update_devmsc(pBlockIndex->GetBlockTime());
+    // devmsc = calculate_and_update_devmsc(pBlockIndex->GetBlockTime());
 
     if (msc_debug_exo) {
         int64_t balance = getMPbalance(exodus_address, OMNI_PROPERTY_MSC, BALANCE);
-        PrintToLog("devmsc for block %d: %d, Exodus balance: %d\n", nBlockNow, devmsc, FormatDivisibleMP(balance));
+        PrintToLog("devmsc for block %d: %d, Exodus balance: %d\n", nBlockNow, devmsc, FormatMP(OMNI_PROPERTY_MSC, exodus_balance)));
     }
 
     // check the alert status, do we need to do anything else here?
