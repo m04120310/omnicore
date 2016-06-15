@@ -116,7 +116,7 @@ private:
     bool interpret_VoteForLicense();
     bool interpret_VoteForAlliance();
     bool interpret_ApplyAlliance();
-    bool interpret_ApplyLicenseWithMoney();
+    bool interpret_ApplyLicenseAndFund();
 
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
@@ -145,7 +145,7 @@ private:
     int logicMath_VoteForLicense();
     int logicMath_VoteForAlliance();
     int logicMath_ApplyAlliance();
-    int logicMath_ApplyLicenseWithMoney();
+    int logicMath_ApplyLicenseAndFund();
 
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();

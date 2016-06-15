@@ -474,7 +474,7 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "gcoin_apply_alliance",            &gcoin_apply_alliance,            false,      true,       false },
     { "hidden",                              "gcoin_get_alliance_info_list",    &gcoin_get_alliance_info_list,    false,      true,       false },
     { "hidden",                              "gcoin_get_alliacne_info_by_address",  &gcoin_get_alliacne_info_by_address,     false, true, false },
-    { "hidden",                              "gcoin_apply_license_with_money",      &gcoin_apply_license_with_money,         false, true, false },
+    { "hidden",                              "gcoin_apply_license_and_fund",      &gcoin_apply_license_and_fund,             false, true, false },
 };
 
 CRPCTable::CRPCTable()

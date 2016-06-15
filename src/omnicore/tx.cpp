@@ -43,7 +43,7 @@ std::string mastercore::strTransactionType(uint16_t txType)
         case GCOIN_TYPE_VOTE_FOR_LICENSE: return "Gcoin Vote For License";
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE: return "Gcoin Vote For Alliance";
         case GCOIN_TYPE_APPLY_ALLIANCE: return "Gcoin Apply Alliance";
-        case GCOIN_TYPE_APPLY_LICENSE_WITH_MONEY: return "Gcoin Apply License with Money";
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND: return "Gcoin Apply License with Money";
         /* original omni */
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
@@ -123,8 +123,8 @@ bool CMPTransaction::interpret_Transaction()
         case GCOIN_TYPE_APPLY_ALLIANCE:
             return interpret_ApplyAlliance();
 
-        case GCOIN_TYPE_APPLY_LICENSE_WITH_MONEY:
-            return interpret_ApplyLicenseWithMoney();
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND:
+            return interpret_ApplyLicenseAndFund();
 
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
@@ -703,7 +703,7 @@ bool CMPTransaction::interpret_ApplyAlliance() {
 }
 
 /** Tx 401 */
-bool CMPTransaction::interpret_ApplyLicenseWithMoney() {
+bool CMPTransaction::interpret_ApplyLicenseAndFund() {
     if (pkt_size < 17) {
         return false;
     }
@@ -864,8 +864,8 @@ int CMPTransaction::interpretPacket()
         case GCOIN_TYPE_APPLY_ALLIANCE:
             return logicMath_ApplyAlliance();
 
-        case GCOIN_TYPE_APPLY_LICENSE_WITH_MONEY:
-            return logicMath_ApplyLicenseWithMoney();
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND:
+            return logicMath_ApplyLicenseAndFund();
 
         case MSC_TYPE_SIMPLE_SEND:
             return logicMath_SimpleSend();
@@ -2112,7 +2112,7 @@ int CMPTransaction::logicMath_ApplyAlliance() {
 }
 
 /** Tx 401 */
-int CMPTransaction::logicMath_ApplyLicenseWithMoney() {
+int CMPTransaction::logicMath_ApplyLicenseAndFund() {
     uint256 blockHash;
     {
         LOCK(cs_main);

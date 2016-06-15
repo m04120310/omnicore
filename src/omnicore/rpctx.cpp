@@ -239,7 +239,7 @@ Value gcoin_apply_alliance(const Array& params, bool fHelp) {
     }
 }
 
-Value gcoin_apply_license_with_money(const Array& params, bool fHelp) {
+Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
     if (fHelp || params.size() != 9)
         throw runtime_error(
             "omni_sendissuancemanaged \"fromaddress\" ecosystem type previousid \"category\" \"subcategory\" \"name\" \"url\" \"data\"\n"
