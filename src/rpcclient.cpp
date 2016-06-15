@@ -224,6 +224,9 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "gcoin_apply_alliance", 4},
     { "gcoin_get_alliance_info_list", },
     { "gcoin_get_alliacne_info_by_address", 1},
+    { "gcoin_apply_license_with_money", 1},
+    { "gcoin_apply_license_with_money", 2},
+    { "gcoin_apply_license_with_money", 3},
 };
 
 class CRPCConvertTable
