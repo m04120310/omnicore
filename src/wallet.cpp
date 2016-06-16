@@ -1373,8 +1373,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
         }
         nValue += s.second;
     }
-    if (vecSend.empty() || nValue < 0)
-    {
+    if (vecSend.empty() || nValue < 0) {
         strFailReason = _("Transaction amounts must be positive");
         return false;
     }

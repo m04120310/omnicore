@@ -337,6 +337,7 @@ extern json_spirit::Value gcoin_get_alliance_info_list(const json_spirit::Array&
 extern json_spirit::Value gcoin_get_alliacne_info_by_address(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_apply_license_and_fund(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_vote_for_license_and_fund(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value send_from_address(const json_spirit::Array& params, bool fHelp);
 
 // in rest.cpp
 extern bool HTTPReq_REST(AcceptedConnection *conn,

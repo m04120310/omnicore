@@ -466,16 +466,17 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "sendtoowners_MP",                 &omni_sendsto,                    false,      true,       true },
     { "hidden",                              "trade_MP",                        &trade_MP,                        false,      true,       true }, // depreciated - to be removed? we haven't released with this call
 #endif
-    { "hidden",                              "test_class_c",                    &test_class_c,                    false,      true,       false },
-    { "hidden",                              "test_class_b",                    &test_class_b,                    false,      true,       false },
-    { "hidden",                              "test_multisig_tx",                &test_multisig_tx,                false,      true,       false },
-    { "hidden",                              "gcoin_vote_for_license",          &gcoin_vote_for_license,          false,      true,       false },
-    { "hidden",                              "gcoin_vote_for_alliance",         &gcoin_vote_for_alliance,         false,      true,       false },
-    { "hidden",                              "gcoin_apply_alliance",            &gcoin_apply_alliance,            false,      true,       false },
+    { "hidden",                              "test_class_c",                    &test_class_c,                    false,      true,       true },
+    { "hidden",                              "test_class_b",                    &test_class_b,                    false,      true,       true },
+    { "hidden",                              "test_multisig_tx",                &test_multisig_tx,                false,      true,       true },
+    { "hidden",                              "gcoin_vote_for_license",          &gcoin_vote_for_license,          false,      true,       true },
+    { "hidden",                              "gcoin_vote_for_alliance",         &gcoin_vote_for_alliance,         false,      true,       true },
+    { "hidden",                              "gcoin_apply_alliance",            &gcoin_apply_alliance,            false,      true,       true },
     { "hidden",                              "gcoin_get_alliance_info_list",    &gcoin_get_alliance_info_list,    false,      true,       false },
-    { "hidden",                              "gcoin_get_alliacne_info_by_address",  &gcoin_get_alliacne_info_by_address,     false, true, false },
+    { "hidden",                              "gcoin_get_alliacne_info_by_address",    &gcoin_get_alliacne_info_by_address,       false, true, false },
     { "hidden",                              "gcoin_apply_license_and_fund",      &gcoin_apply_license_and_fund,             false, true, true  },
     { "hidden",                              "gcoin_vote_for_license_and_fund",  &gcoin_vote_for_license_and_fund,           false, true, true  },
+    { "hidden",                              "send_from_address",               &send_from_address,                false,   true,       true },
 };
 
 CRPCTable::CRPCTable()
@@ -1041,7 +1042,6 @@ static bool HTTPReq_JSONRPC(AcceptedConnection *conn,
         // singleton request
         if (valRequest.type() == obj_type) {
             jreq.parse(valRequest);
-
             Value result = tableRPC.execute(jreq.strMethod, jreq.params);
 
             // Send reply
@@ -1114,6 +1114,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 {
     // Find method
     printf("strMehtod: %s\n", strMethod.c_str());
+
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");
@@ -1133,8 +1134,9 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
         // Execute
         Value result;
         {
-            if (pcmd->threadSafe)
+            if (pcmd->threadSafe) {
                 result = pcmd->actor(params, false);
+            }
 #ifdef ENABLE_WALLET
             else if (!pwalletMain) {
                 LOCK(cs_main);

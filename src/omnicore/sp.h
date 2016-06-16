@@ -131,6 +131,7 @@ public:
             READWRITE(approve_threshold);
             READWRITE(approve_count);
             READWRITE(reject_count);
+            READWRITE(money_application);
         }
 
         bool isDivisible() const;
@@ -316,6 +317,24 @@ public:
     void printAll();
 };
 
+// BTC tx record DB
+class BTCTxRecordDB : public CDBBase {
+public:
+    BTCTxRecordDB(const boost::filesystem::path& path, bool fWipe) {
+        leveldb::Status status = Open(path, fWipe);
+        PrintToConsole("Loading btc tx record database: %s\n", status.ToString());
+    }
+
+    virtual ~BTCTxRecordDB() {
+        if (msc_debug_persistence)
+            PrintToLog("BTCTxRecordDB is closed\n");
+    }
+    void clear();
+    bool getBTCTxRecord(std::string address, uint32_t pid, std::string& txid);
+    bool putBTCTxRecord(std::string address, uint32_t pid, std::string txid);
+    bool hasBTCTxRecord(std::string address, uint32_t pid);
+    bool deleteBTCTxRecord(std::string address, uint32_t pid);
+};
 
 namespace mastercore
 {
@@ -325,6 +344,7 @@ extern CMPSPInfo* _my_sps;
 extern CrowdMap my_crowds;
 extern AllianceInfo* allianceInfoDB;
 extern VoteRecordDB* voteRecordDB;
+extern BTCTxRecordDB* btcTxRecordDB;
 
 std::string strPropertyType(uint16_t propertyType);
 std::string strEcosystem(uint8_t ecosystem);
