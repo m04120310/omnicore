@@ -24,6 +24,7 @@ uint8_t ParseDExAction(const json_spirit::Value& value);
 uint8_t ParseEcosystem(const json_spirit::Value& value);
 uint16_t ParsePropertyType(const json_spirit::Value& value);
 uint32_t ParsePreviousPropertyId(const json_spirit::Value& value);
+uint32_t ParseMoneyApplication(const json_spirit::Value& value);
 std::string ParseText(const json_spirit::Value& value);
 int64_t ParseDeadline(const json_spirit::Value& value);
 uint8_t ParseEarlyBirdBonus(const json_spirit::Value& value);

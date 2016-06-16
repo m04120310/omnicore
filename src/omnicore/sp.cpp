@@ -679,7 +679,7 @@ bool AllianceInfo::putAllianceInfo(std::string address, Entry& info) {
     return status.ok();
 }
 
-AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold, 
+AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold,
                                                            std::string data, uint256 txid, uint256 blockId) {
     AllianceInfo::Entry entry;
     entry.address = address;

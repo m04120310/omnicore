@@ -704,10 +704,10 @@ bool CMPTransaction::interpret_ApplyAlliance() {
 
 /** Tx 401 */
 bool CMPTransaction::interpret_ApplyLicenseAndFund() {
-    if (pkt_size < 17) {
+    if (pkt_size < 21) {
         return false;
     }
-    const char* p = 13 + (char*) &pkt;
+    const char* p = 17 + (char*) &pkt;
     std::vector<std::string> spstr;
     memcpy(&ecosystem, &pkt[4], 1);
     memcpy(&prop_type, &pkt[5], 2);
@@ -718,6 +718,9 @@ bool CMPTransaction::interpret_ApplyLicenseAndFund() {
     // Get approve_threshold
     memcpy(&approve_threshold, &pkt[11], 2);
     swapByteOrder16(approve_threshold);
+
+    memcpy(&money_application, &pkt[13], 4);
+    swapByteOrder32(money_application);
 
     for (int i = 0; i < 5; i++) {
         spstr.push_back(std::string(p));
@@ -735,6 +738,7 @@ bool CMPTransaction::interpret_ApplyLicenseAndFund() {
         PrintToLog("\t   property type: %d (%s)\n", prop_type, strPropertyType(prop_type));
         PrintToLog("\tprev property id: %d\n", prev_prop_id);
         PrintToLog("\tapprove threshold: %d\n", approve_threshold);
+        PrintToLog("\tmoney application: %d\n", money_application);
         PrintToLog("\t        category: %s\n", category);
         PrintToLog("\t     subcategory: %s\n", subcategory);
         PrintToLog("\t            name: %s\n", name);
@@ -2130,16 +2134,6 @@ int CMPTransaction::logicMath_ApplyLicenseAndFund() {
         return (PKT_ERROR_SP -21);
     }
 
-    if (!IsTransactionTypeAllowed(block, ecosystem, type, version)) {
-        PrintToLog("%s(): rejected: type %d or version %d not permitted for property %d at block %d\n",
-                __func__,
-                type,
-                version,
-                property,
-                block);
-        return (PKT_ERROR_SP -22);
-    }
-
     if (MSC_PROPERTY_TYPE_INDIVISIBLE != prop_type && MSC_PROPERTY_TYPE_DIVISIBLE != prop_type) {
         PrintToLog("%s(): rejected: invalid property type: %d\n", __func__, prop_type);
         return (PKT_ERROR_SP -36);
@@ -2168,6 +2162,7 @@ int CMPTransaction::logicMath_ApplyLicenseAndFund() {
     newSP.approve_threshold = approve_threshold;
     newSP.approve_count = 0;
     newSP.reject_count = 0;
+    newSP.money_application = money_application;
 
     uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
     assert(propertyId > 0);

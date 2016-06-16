@@ -96,6 +96,7 @@ public:
         uint16_t approve_threshold;
         uint16_t approve_count;
         uint16_t reject_count;
+        uint32_t money_application;
 
         Entry();
 
@@ -278,7 +279,7 @@ public:
 
     void init();
     void clear();
-    static Entry allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold, 
+    static Entry allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold,
                                  std::string data, uint256 txid, uint256 blockId);
     bool updateAllianceInfo(std::string address, Entry& info);
     bool putAllianceInfo(std::string address, Entry& info);

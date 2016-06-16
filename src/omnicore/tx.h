@@ -76,6 +76,9 @@ private:
     char voteType[10];
     uint16_t approve_threshold;
 
+    // Gcoin License
+    uint32_t money_application;
+
     // Gcoin Alliance
     char alliance_name[SP_STRING_FIELD_LEN];
     char alliance_url[SP_STRING_FIELD_LEN];

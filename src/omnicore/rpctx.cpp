@@ -240,9 +240,9 @@ Value gcoin_apply_alliance(const Array& params, bool fHelp) {
 }
 
 Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
-    if (fHelp || params.size() != 9)
+    if (fHelp || params.size() != 10)
         throw runtime_error(
-            "omni_sendissuancemanaged \"fromaddress\" ecosystem type previousid \"category\" \"subcategory\" \"name\" \"url\" \"data\"\n"
+            "gcoin_apply_license_and_fund \"fromaddress\" ecosystem type previousid \"category\" \"subcategory\" \"name\" \"url\" \"data\"\n"
 
             "\nCreate new tokens with manageable supply.\n"
 
@@ -256,13 +256,14 @@ Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
             "7. name                 (string, required) the name of the new tokens to create\n"
             "8. url                  (string, required) an URL for further information about the new tokens (can be \"\")\n"
             "9. data                 (string, required) a description for the new tokens (can be \"\")\n"
+            "10. money application   (number, required) the amount of money for application (can be \"\")\n"
 
             "\nResult:\n"
             "\"hash\"                  (string) the hex-encoded transaction hash\n"
 
             "\nExamples:\n"
-            + HelpExampleCli("omni_sendissuancemanaged", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\" 2 1 0 \"Companies\" \"Bitcoin Mining\" \"Quantum Miner\" \"\" \"\"")
-            + HelpExampleRpc("omni_sendissuancemanaged", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\", 2, 1, 0, \"Companies\", \"Bitcoin Mining\", \"Quantum Miner\", \"\", \"\"")
+            + HelpExampleCli("gcoin_apply_license_and_fund", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\" 2 1 0 \"Companies\" \"Bitcoin Mining\" \"Quantum Miner\" \"\" \"\"")
+            + HelpExampleRpc("gcoin_apply_license_and_fund", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\", 2, 1, 0, \"Companies\", \"Bitcoin Mining\", \"Quantum Miner\", \"\", \"\"")
         );
 
     // obtain parameters & info
@@ -275,12 +276,14 @@ Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
     std::string name = ParseText(params[6]);
     std::string url = ParseText(params[7]);
     std::string data = ParseText(params[8]);
+    uint32_t moneyApplication = ParseMoneyApplication(params[9]);
+    PrintToLog("%s(): moneyApplication = %d\n", __func__, moneyApplication);
 
     // perform checks
     RequirePropertyName(name);
 
     // create a payload for the transaction
-    std::vector<unsigned char> payload = CreatePayload_IssuanceManaged(ecosystem, type, previousId, category, subcategory, name, url, data);
+    std::vector<unsigned char> payload = CreatePayload_ApplyLicenseAndFund(ecosystem, type, previousId, category, subcategory, name, url, data, moneyApplication);
 
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;
