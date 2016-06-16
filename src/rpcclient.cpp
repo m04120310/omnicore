@@ -228,6 +228,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "gcoin_apply_license_and_fund", 2},
     { "gcoin_apply_license_and_fund", 3},
     { "gcoin_apply_license_and_fund", 9},
+    { "gcoin_vote_for_license_and_fund", 1},
 };
 
 class CRPCConvertTable

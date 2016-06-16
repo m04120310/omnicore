@@ -120,6 +120,7 @@ private:
     bool interpret_VoteForAlliance();
     bool interpret_ApplyAlliance();
     bool interpret_ApplyLicenseAndFund();
+    bool interpret_VoteForLicenseAndFund();
 
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
@@ -149,6 +150,7 @@ private:
     int logicMath_VoteForAlliance();
     int logicMath_ApplyAlliance();
     int logicMath_ApplyLicenseAndFund();
+    int logicMath_VoteForLicenseAndFund();
 
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();

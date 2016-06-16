@@ -43,7 +43,9 @@ std::string mastercore::strTransactionType(uint16_t txType)
         case GCOIN_TYPE_VOTE_FOR_LICENSE: return "Gcoin Vote For License";
         case GCOIN_TYPE_VOTE_FOR_ALLIANCE: return "Gcoin Vote For Alliance";
         case GCOIN_TYPE_APPLY_ALLIANCE: return "Gcoin Apply Alliance";
-        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND: return "Gcoin Apply License with Money";
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND: return "Gcoin Apply License and fund";
+        case GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND: return "Gcoin Vote For License and fund";
+
         /* original omni */
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
@@ -125,6 +127,9 @@ bool CMPTransaction::interpret_Transaction()
 
         case GCOIN_TYPE_APPLY_LICENSE_AND_FUND:
             return interpret_ApplyLicenseAndFund();
+
+        case GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND:
+            return interpret_VoteForLicenseAndFund();
 
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
@@ -785,6 +790,25 @@ bool CMPTransaction::interpret_VoteForAlliance() {
     return true;
 }
 
+/** Tx 502 */
+bool CMPTransaction::interpret_VoteForLicenseAndFund() {
+
+    memcpy(&property, &pkt[4], 4);
+    swapByteOrder32(property);
+
+    PrintToConsole("%s(): property %d\n", __func__, property);
+    PrintToLog("%s(): property %d\n", __func__, property);
+
+    char *p = 8 + (char*) &pkt;
+    std::string tmp(p);
+    memset(voteType, 0, sizeof(voteType));
+    memcpy(voteType, tmp.c_str(), tmp.length());
+    PrintToConsole("%s(): voteType is %s\n", __func__, voteType);
+    PrintToLog("%s(): voteType is %s\n", __func__, voteType);
+
+    return true;
+}
+
 /** Tx 65534 */
 bool CMPTransaction::interpret_Activation()
 {
@@ -870,6 +894,9 @@ int CMPTransaction::interpretPacket()
 
         case GCOIN_TYPE_APPLY_LICENSE_AND_FUND:
             return logicMath_ApplyLicenseAndFund();
+
+        case GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND:
+            return logicMath_VoteForLicenseAndFund();
 
         case MSC_TYPE_SIMPLE_SEND:
             return logicMath_SimpleSend();
@@ -2251,7 +2278,7 @@ int CMPTransaction::logicMath_VoteForLicense() {
     return 0;
 }
 
-/* Tx  */
+/* Tx 501 */
 int CMPTransaction::logicMath_VoteForAlliance() {
     PrintToConsole("%s(): sender: %s, receiver: %s\n", __func__, sender, receiver);
     PrintToLog("%s(): sender: %s, receiver: %s\n", __func__, sender, receiver);
@@ -2290,7 +2317,7 @@ int CMPTransaction::logicMath_VoteForAlliance() {
     uint32_t weightedVote = 1;
     if (GCOIN_USE_WEIGHTED_ALLIANCE) {
         weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
-    } 
+    }
     // If this is a new vote
     if (!voteRecordDB->hasVoteRecord(sender, 400, receiver)) {
         // compare 'voteType': approve or reject
@@ -2328,6 +2355,85 @@ int CMPTransaction::logicMath_VoteForAlliance() {
     PrintToConsole("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
     PrintToLog("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);
     PrintToConsole("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);
+
+    return 0;
+}
+
+/** Tx 502 */
+int CMPTransaction::logicMath_VoteForLicenseAndFund() {
+    printf("%s(): property %u\n", __func__, property);
+    PrintToLog("%s(): property %u\n", __func__, property);
+
+    if (OMNI_PROPERTY_MSC == property || OMNI_PROPERTY_TMSC == property) {
+        return false;
+    }
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare sender with Alliance
+    if (!allianceInfoDB->isAllianceApproved(sender)) {
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
+    // compare property id
+    if (!_my_sps->hasSP(property)) {
+        PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
+        return (PKT_ERROR_TOKENS -24);
+    }
+
+    CMPSPInfo::Entry sp;
+    assert(_my_sps->getSP(property, sp));
+
+    // Prepare property id string
+    std::string propertyIdString;
+    char tmp[20];
+    snprintf(tmp, sizeof(tmp), "%u", property);
+    propertyIdString.append(tmp);
+
+    std::string voteTypeString(voteType);
+    uint32_t weightedVote = 1;
+    if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+        weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
+    }
+    // If this is a new vote
+    if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
+        // compare 'voteType': approve or reject
+        // and set the approve_count and reject_count
+        if (strcmp(voteType, "approve") == 0) {
+            sp.approve_count += weightedVote;
+            PrintToLog("%s(): Vote for approve\n", __func__);
+            PrintToConsole("%s(): Vote for approve\n", __func__);
+        }
+        else if (strcmp(voteType, "reject") == 0) {
+            sp.reject_count += weightedVote;
+            PrintToLog("%s(): Vote for reject\n", __func__);
+            PrintToConsole("%s(): Vote for reject\n", __func__);
+        }
+
+    } else { // If this is a dupilcate vote
+        PrintToLog("This alliance %s has already voted for the property: %d.\n", sender, property);
+        PrintToConsole("This alliance %s has already voted for the property: %d.\n", sender, property);
+        return false;
+    }
+
+    // Store/update this vote into db
+    voteRecordDB->putVoteRecord(sender, 54, propertyIdString, voteTypeString);
+
+    // Save Updated SP to DB
+    assert(_my_sps->updateSP(property, sp));
+    PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
+    PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
 
     return 0;
 }
