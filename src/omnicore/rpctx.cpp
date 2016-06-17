@@ -298,7 +298,7 @@ Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
             "7. name                 (string, required) the name of the new tokens to create\n"
             "8. url                  (string, required) an URL for further information about the new tokens (can be \"\")\n"
             "9. data                 (string, required) a description for the new tokens (can be \"\")\n"
-            "10. money application   (number, required) the amount of money for application (should not be 0)\n"
+            "10. money application   (number, required) the amount of money for application (should greater than 0.0)\n"
 
             "\nResult:\n"
             "\"hash\"                  (string) the hex-encoded transaction hash\n"
@@ -318,7 +318,7 @@ Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
     std::string name = ParseText(params[6]);
     std::string url = ParseText(params[7]);
     std::string data = ParseText(params[8]);
-    uint32_t moneyApplication = ParseMoneyApplication(params[9]);
+    uint32_t moneyApplication = (uint32_t) AmountFromValue(params[9]);
     PrintToLog("%s(): moneyApplication = %d\n", __func__, moneyApplication);
 
     // perform checks
