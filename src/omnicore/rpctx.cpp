@@ -136,7 +136,8 @@ Value gcoin_vote_for_license(const Array& params, bool fHelp) {
     if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
         throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
     }
-    printf("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+    PrintToConsole("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_VoteForLicense(propertyId, voteType);
 
@@ -297,7 +298,7 @@ Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
             "7. name                 (string, required) the name of the new tokens to create\n"
             "8. url                  (string, required) an URL for further information about the new tokens (can be \"\")\n"
             "9. data                 (string, required) a description for the new tokens (can be \"\")\n"
-            "10. money application   (number, required) the amount of money for application (can be \"\")\n"
+            "10. money application   (number, required) the amount of money for application (should not be 0)\n"
 
             "\nResult:\n"
             "\"hash\"                  (string) the hex-encoded transaction hash\n"

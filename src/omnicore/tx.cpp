@@ -2235,6 +2235,11 @@ int CMPTransaction::logicMath_VoteForLicense() {
     CMPSPInfo::Entry sp;
     assert(_my_sps->getSP(property, sp));
 
+    if (sp.money_application != 0) {
+        PrintToLog("%s(): rejected: property %d is applied with fund %d, please use RPC:gcoin_vote_for_license_and_fund\n", __func__, property, sp.money_application);
+        return false;
+    }
+
     // Prepare property id string
     std::string propertyIdString;
     char tmp[20];
@@ -2394,6 +2399,11 @@ int CMPTransaction::logicMath_VoteForLicenseAndFund() {
 
     CMPSPInfo::Entry sp;
     assert(_my_sps->getSP(property, sp));
+
+    if (sp.money_application == 0) {
+        PrintToLog("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
+        return false;
+    }
 
     // Prepare property id string
     std::string propertyIdString;
