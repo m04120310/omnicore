@@ -80,6 +80,8 @@ void AllianceToJSON(AllianceInfo::Entry& entry, Object& alliance_obj) {
     alliance_obj.push_back(Pair("data", entry.data));
     alliance_obj.push_back(Pair("url", entry.url));
     alliance_obj.push_back(Pair("status", entry.getStatusString()));
+    int64_t balance = getMPbalance(entry.address, OMNI_PROPERTY_MSC, BALANCE);
+    alliance_obj.push_back(Pair("reward token", balance));
 }
 
 void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)

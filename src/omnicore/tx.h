@@ -76,6 +76,9 @@ private:
     char voteType[10];
     uint16_t approve_threshold;
 
+    // Gcoin License
+    uint32_t money_application;
+
     // Gcoin Alliance
     char alliance_name[SP_STRING_FIELD_LEN];
     char alliance_url[SP_STRING_FIELD_LEN];
@@ -116,6 +119,8 @@ private:
     bool interpret_VoteForLicense();
     bool interpret_VoteForAlliance();
     bool interpret_ApplyAlliance();
+    bool interpret_ApplyLicenseAndFund();
+    bool interpret_VoteForLicenseAndFund();
 
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
@@ -144,6 +149,8 @@ private:
     int logicMath_VoteForLicense();
     int logicMath_VoteForAlliance();
     int logicMath_ApplyAlliance();
+    int logicMath_ApplyLicenseAndFund();
+    int logicMath_VoteForLicenseAndFund();
 
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();

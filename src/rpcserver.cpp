@@ -470,10 +470,12 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "test_class_b",                    &test_class_b,                    false,      true,       false },
     { "hidden",                              "test_multisig_tx",                &test_multisig_tx,                false,      true,       false },
     { "hidden",                              "gcoin_vote_for_license",          &gcoin_vote_for_license,          false,      true,       false },
-    { "hidden",                              "gcoin_vote_for_alliance",         &gcoin_vote_for_alliance,          false,      true,       false },
-    { "hidden",                              "gcoin_apply_alliance",            &gcoin_apply_alliance,          false,      true,       false },
+    { "hidden",                              "gcoin_vote_for_alliance",         &gcoin_vote_for_alliance,         false,      true,       false },
+    { "hidden",                              "gcoin_apply_alliance",            &gcoin_apply_alliance,            false,      true,       false },
     { "hidden",                              "gcoin_get_alliance_info_list",    &gcoin_get_alliance_info_list,    false,      true,       false },
-    { "hidden",                              "gcoin_get_alliacne_info_by_address",    &gcoin_get_alliacne_info_by_address,       false, true, false },
+    { "hidden",                              "gcoin_get_alliacne_info_by_address",  &gcoin_get_alliacne_info_by_address,     false, true, false },
+    { "hidden",                              "gcoin_apply_license_and_fund",      &gcoin_apply_license_and_fund,             false, true, true  },
+    { "hidden",                              "gcoin_vote_for_license_and_fund",  &gcoin_vote_for_license_and_fund,           false, true, true  },
 };
 
 CRPCTable::CRPCTable()

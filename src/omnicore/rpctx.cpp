@@ -57,13 +57,11 @@ Value test_class_b(const Array& params, bool fHelp) {
     } else {
         data.assign(tmp);
     }
-    printf("data: %s\n", data.c_str());
     std::string redeemAddress = "";
     int64_t referenceAmount = 0;
 
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_Test_B(data);
-    printf("payload size: %d\n", payload.size());
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;
     std::string rawHex;
@@ -138,9 +136,51 @@ Value gcoin_vote_for_license(const Array& params, bool fHelp) {
     if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
         throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
     }
-    printf("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+    PrintToConsole("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_VoteForLicense(propertyId, voteType);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            // PendingAdd(txid, fromAddress, MSC_TYPE_SIMPLE_SEND, propertyId, amount);
+            return txid.GetHex();
+        }
+    }
+}
+
+// vote for license tx
+Value gcoin_vote_for_license_and_fund(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 3)
+        throw runtime_error("vote for license tx argument error.\n"
+                             "params[0]: from address.\n"
+                             "params[1]: property id.\n"
+                             "params[2]: approve/reject\n");
+
+    std::string fromAddress = ParseAddress(params[0]);
+    uint32_t propertyId = ParsePropertyId(params[1]);
+    std::string voteType = params[2].get_str();
+
+    if (!allianceInfoDB->isAllianceApproved(fromAddress)) {
+        throw runtime_error("From address is not a member of alliance.");
+    }
+
+    if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
+        throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
+    }
+    printf("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_VoteForLicenseAndFund(propertyId, voteType);
 
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;
@@ -223,6 +263,69 @@ Value gcoin_apply_alliance(const Array& params, bool fHelp) {
 
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_ApplyAlliance(alliance_name, url, data);
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
+
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            return txid.GetHex();
+        }
+    }
+}
+
+Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 10)
+        throw runtime_error(
+            "gcoin_apply_license_and_fund \"fromaddress\" ecosystem type previousid \"category\" \"subcategory\" \"name\" \"url\" \"data\"\n"
+
+            "\nCreate new tokens with manageable supply.\n"
+
+            "\nArguments:\n"
+            "1. fromaddress          (string, required) the address to send from\n"
+            "2. ecosystem            (string, required) the ecosystem to create the tokens in (1 for main ecosystem, 2 for test ecosystem)\n"
+            "3. type                 (number, required) the type of the tokens to create: (1 for indivisible tokens, 2 for divisible tokens)\n"
+            "4. previousid           (number, required) an identifier of a predecessor token (use 0 for new tokens)\n"
+            "5. category             (string, required) a category for the new tokens (can be \"\")\n"
+            "6. subcategory          (string, required) a subcategory for the new tokens  (can be \"\")\n"
+            "7. name                 (string, required) the name of the new tokens to create\n"
+            "8. url                  (string, required) an URL for further information about the new tokens (can be \"\")\n"
+            "9. data                 (string, required) a description for the new tokens (can be \"\")\n"
+            "10. money application   (number, required) the amount of money for application (should not be 0)\n"
+
+            "\nResult:\n"
+            "\"hash\"                  (string) the hex-encoded transaction hash\n"
+
+            "\nExamples:\n"
+            + HelpExampleCli("gcoin_apply_license_and_fund", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\" 2 1 0 \"Companies\" \"Bitcoin Mining\" \"Quantum Miner\" \"\" \"\"")
+            + HelpExampleRpc("gcoin_apply_license_and_fund", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\", 2, 1, 0, \"Companies\", \"Bitcoin Mining\", \"Quantum Miner\", \"\", \"\"")
+        );
+
+    // obtain parameters & info
+    std::string fromAddress = ParseAddress(params[0]);
+    uint8_t ecosystem = ParseEcosystem(params[1]);
+    uint16_t type = ParsePropertyType(params[2]);
+    uint32_t previousId = ParsePreviousPropertyId(params[3]);
+    std::string category = ParseText(params[4]);
+    std::string subcategory = ParseText(params[5]);
+    std::string name = ParseText(params[6]);
+    std::string url = ParseText(params[7]);
+    std::string data = ParseText(params[8]);
+    uint32_t moneyApplication = ParseMoneyApplication(params[9]);
+    PrintToLog("%s(): moneyApplication = %d\n", __func__, moneyApplication);
+
+    // perform checks
+    RequirePropertyName(name);
+
+    // create a payload for the transaction
+    std::vector<unsigned char> payload = CreatePayload_ApplyLicenseAndFund(ecosystem, type, previousId, category, subcategory, name, url, data, moneyApplication);
 
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;

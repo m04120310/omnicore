@@ -9,8 +9,12 @@
 std::vector<unsigned char> CreatePayload_Test_C(std::string data);
 std::vector<unsigned char> CreatePayload_Test_B(std::string data);
 std::vector<unsigned char> CreatePayload_VoteForLicense(uint32_t propertyId, std::string voteType);
+std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t propertyId, std::string voteType);
 std::vector<unsigned char> CreatePayload_VoteForAlliance(std::string voteType);
 std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name, std::string url, std::string data);
+std::vector<unsigned char> CreatePayload_ApplyLicenseAndFund(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
+                                                       std::string subcategory, std::string name, std::string url, std::string data, uint32_t moneyApplication);
+
 std::vector<unsigned char> CreatePayload_SimpleSend(uint32_t propertyId, uint64_t amount);
 std::vector<unsigned char> CreatePayload_SendAll(uint8_t ecosystem);
 std::vector<unsigned char> CreatePayload_DExSell(uint32_t propertyId, uint64_t amountForSale, uint64_t amountDesired, uint8_t timeLimit, uint64_t minFee, uint8_t subAction);

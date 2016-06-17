@@ -126,6 +126,15 @@ uint32_t ParsePreviousPropertyId(const json_spirit::Value& value)
     return static_cast<uint32_t>(previousId);
 }
 
+uint32_t ParseMoneyApplication(const json_spirit::Value& value)
+{
+    int64_t moneyApplication = value.get_int64();
+    if (moneyApplication == 0) {
+        throw JSONRPCError(RPC_TYPE_ERROR, "The fund application should not be 0");
+    }
+    return static_cast<uint32_t>(moneyApplication);
+}
+
 std::string ParseText(const json_spirit::Value& value)
 {
     std::string text = value.get_str();
