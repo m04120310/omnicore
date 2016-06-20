@@ -17,6 +17,7 @@
 #include "amount.h"
 #include "main.h"
 #include "sync.h"
+#include "base58.h"
 #include "utiltime.h"
 
 #include <boost/algorithm/string.hpp>
@@ -90,6 +91,14 @@ static std::string intToClass(int encodingClass)
     }
 
     return "-";
+}
+
+int sendToAddress(std::string fromAddress, std::string toAddress, int64_t amount, uint256& txid) {
+    PrintToConsole("toAddress: %s", toAddress);
+    std::string rawHex;
+    std::vector<unsigned char> payload;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, toAddress, "", amount, payload, txid, rawHex, true);
+    return result;
 }
 
 /** Checks whether a pointer to the payload is past it's last position. */
@@ -1869,7 +1878,7 @@ int CMPTransaction::logicMath_CreatePropertyManaged()
     newSP.approve_threshold = approve_threshold;
     newSP.approve_count = 0;
     newSP.reject_count = 0;
-
+    newSP.money_application = 0;
     uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
     assert(propertyId > 0);
 
@@ -2236,12 +2245,14 @@ int CMPTransaction::logicMath_VoteForLicense() {
     assert(_my_sps->getSP(property, sp));
 
     if (sp.money_application != 0) {
+        PrintToConsole("%s(): rejected: property %d is applied with fund %d, please use RPC:gcoin_vote_for_license_and_fund\n", __func__, property, sp.money_application);
         PrintToLog("%s(): rejected: property %d is applied with fund %d, please use RPC:gcoin_vote_for_license_and_fund\n", __func__, property, sp.money_application);
         return false;
     }
 
     // Prepare property id string
     std::string propertyIdString;
+
     char tmp[20];
     snprintf(tmp, sizeof(tmp), "%u", property);
     propertyIdString.append(tmp);
@@ -2271,7 +2282,7 @@ int CMPTransaction::logicMath_VoteForLicense() {
         PrintToConsole("This alliance %s has already voted for the property: %d.\n", sender, property);
         return false;
     }
-
+    
     // Store/update this vote into db
     voteRecordDB->putVoteRecord(sender, 54, propertyIdString, voteTypeString);
 
@@ -2387,12 +2398,14 @@ int CMPTransaction::logicMath_VoteForLicenseAndFund() {
 
     // compare sender with Alliance
     if (!allianceInfoDB->isAllianceApproved(sender)) {
+        PrintToConsole("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
         PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
         return false;
     }
 
     // compare property id
     if (!_my_sps->hasSP(property)) {
+        PrintToConsole("%s(): rejected: property %d does not exist\n", __func__, property);
         PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
         return (PKT_ERROR_TOKENS -24);
     }
@@ -2401,12 +2414,15 @@ int CMPTransaction::logicMath_VoteForLicenseAndFund() {
     assert(_my_sps->getSP(property, sp));
 
     if (sp.money_application == 0) {
+        PrintToConsole("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
         PrintToLog("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
         return false;
     }
 
     // Prepare property id string
     std::string propertyIdString;
+    std::string issuer = sp.issuer;
+
     char tmp[20];
     snprintf(tmp, sizeof(tmp), "%u", property);
     propertyIdString.append(tmp);
@@ -2437,6 +2453,31 @@ int CMPTransaction::logicMath_VoteForLicenseAndFund() {
         return false;
     }
 
+    // TODO: may have to deal with rejected situation. 
+    if (sp.approve_count >= sp.approve_threshold) {
+        // Request the wallet build the transaction (and if needed commit it)
+        // TODO: may have to check if exodus is belonged to this wallet here. 
+        if (!btcTxRecordDB->hasBTCTxRecord(issuer, property)) {
+            uint256 txid;
+            // TODO: replace real amount here. 
+            PrintToConsole("\n***********send to address: %s, amount: %u\n", issuer, sp.money_application);
+            int result = sendToAddress(ExodusAddress().ToString(), issuer, sp.money_application, txid);
+            if (result != 0) {
+                PrintToLog("Send to address error while license approved. Maybe you are not exodus owner. Error code: %d\n", result);
+                PrintToConsole("Send to address error while license approved. Maybe you are not exodus owner. Error code: %d\n", result);
+            } else {
+                PrintToLog("Send to address success. txid: %s\n", txid.GetHex());
+                PrintToConsole("Send to address success. txid: %s\n", txid.GetHex());
+                btcTxRecordDB->putBTCTxRecord(issuer, property, txid.GetHex());
+            }
+        } else {
+            std::string txidStr;
+            btcTxRecordDB->getBTCTxRecord(issuer, property, txidStr);
+            PrintToConsole("Already paid for this apply, txid: %s\n", txidStr);
+            PrintToLog("Already paid for this apply, txid: %s\n", txidStr);
+        }
+    }  
+    
     // Store/update this vote into db
     voteRecordDB->putVoteRecord(sender, 54, propertyIdString, voteTypeString);
 
@@ -2518,4 +2559,3 @@ int CMPTransaction::logicMath_Alert()
 
     return 0;
 }
-

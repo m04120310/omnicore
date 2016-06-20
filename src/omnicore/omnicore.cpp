@@ -136,6 +136,7 @@ CMPSTOList *mastercore::s_stolistdb;
 COmniTransactionDB *mastercore::p_OmniTXDB;
 AllianceInfo *mastercore::allianceInfoDB;
 VoteRecordDB *mastercore::voteRecordDB;
+BTCTxRecordDB *mastercore::btcTxRecordDB;
 // indicate whether persistence is enabled at this point, or not
 // used to write/read files, for breakout mode, debugging, etc.
 static bool writePersistence(int block_now)
@@ -2137,7 +2138,11 @@ int mastercore_init() {
     // Vote record db
     PrintToConsole("init vote info db\n");
     voteRecordDB = new VoteRecordDB(GetDataDir() / "VoteRecordDB", fReindex);
-    voteRecordDB->printAll();
+
+    // BTC tx record db
+    PrintToConsole("init BTC tx info db\n");
+    btcTxRecordDB = new BTCTxRecordDB(GetDataDir() / "BTCTxRecordDB", fReindex);
+
 
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);
@@ -2334,7 +2339,9 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
                           int64_t referenceAmount, const std::vector<unsigned char>& data, uint256& txid, std::string& rawHex, bool commit)
 {
 #ifdef ENABLE_WALLET
-    if (pwalletMain == NULL) return MP_ERR_WALLET_ACCESS;
+    if (pwalletMain == NULL) {
+        return MP_ERR_WALLET_ACCESS;
+    }
 
     // Determine the class to send the transaction via - default is Class C
     int omniTxClass = OMNI_CLASS_C;
@@ -2360,18 +2367,20 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     if (0 > SelectCoins(senderAddress, coinControl, referenceAmount)) { return MP_INPUTS_INVALID; }
 
     // Encode the data outputs
-    switch(omniTxClass) {
-        case OMNI_CLASS_B: { // declaring vars in a switch here so use an expicit code block
-            CPubKey redeemingPubKey;
-            const std::string& sAddress = redemptionAddress.empty() ? senderAddress : redemptionAddress;
-            if (!AddressToPubKey(sAddress, redeemingPubKey)) {
-                return MP_REDEMP_BAD_VALIDATION;
-            }
-            if (!OmniCore_Encode_ClassB(senderAddress,redeemingPubKey,data,vecSend)) { return MP_ENCODING_ERROR; }
-        break; }
-        case OMNI_CLASS_C:
-            if(!OmniCore_Encode_ClassC(data,vecSend)) { return MP_ENCODING_ERROR; }
-        break;
+    if (data.size() != 0) {
+        switch(omniTxClass) {
+            case OMNI_CLASS_B: { // declaring vars in a switch here so use an expicit code block
+                CPubKey redeemingPubKey;
+                const std::string& sAddress = redemptionAddress.empty() ? senderAddress : redemptionAddress;
+                if (!AddressToPubKey(sAddress, redeemingPubKey)) {
+                    return MP_REDEMP_BAD_VALIDATION;
+                }
+                if (!OmniCore_Encode_ClassB(senderAddress,redeemingPubKey,data,vecSend)) { return MP_ENCODING_ERROR; }
+            break; }
+            case OMNI_CLASS_C:
+                if(!OmniCore_Encode_ClassC(data,vecSend)) { return MP_ENCODING_ERROR; }
+            break;
+        }
     }
 
     // Then add a paytopubkeyhash output for the recipient (if needed) - note we do this last as we want this to be the highest vout
@@ -2385,7 +2394,9 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     if (!coinControl.HasSelected()) return MP_ERR_INPUTSELECT_FAIL;
 
     // Ask the wallet to create the transaction (note mining fee determined by Bitcoin Core params)
-    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reserveKey, nFeeRet, strFailReason, &coinControl)) { return MP_ERR_CREATE_TX; }
+    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reserveKey, nFeeRet, strFailReason, &coinControl)) { 
+        PrintToConsole("Create tx failed. Reason: %s\n", strFailReason);
+        return MP_ERR_CREATE_TX; }
 
     // If this request is only to create, but not commit the transaction then display it and exit
     if (!commit) {
@@ -2395,10 +2406,10 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
         // Commit the transaction to the wallet and broadcast)
         PrintToLog("%s():%s; nFeeRet = %lu, line %d, file: %s\n", __FUNCTION__, wtxNew.ToString(), nFeeRet, __LINE__, __FILE__);
         if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) {
-            printf("commit tx failed~?\n");
+            PrintToLog("commit tx failed\n");
             return MP_ERR_COMMIT_TX;
         }
-        printf("commit successfully\n");
+        PrintToLog("commit successfully\n");
         txid = wtxNew.GetHash();
         return 0;
     }
