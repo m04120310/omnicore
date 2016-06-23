@@ -97,6 +97,7 @@ public:
         uint16_t approve_count;
         uint16_t reject_count;
         uint32_t money_application;
+        std::string money_application_txid;
 
         Entry();
 
@@ -132,6 +133,7 @@ public:
             READWRITE(approve_count);
             READWRITE(reject_count);
             READWRITE(money_application);
+            READWRITE(money_application_txid);
         }
 
         bool isDivisible() const;

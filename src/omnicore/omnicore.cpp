@@ -933,13 +933,18 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
                         if (msc_debug_parser_data) PrintToLog("Removed change\n");
                     } else {
                         strReference = addr; // this may be set several times, but last time will be highest vout
+                        referenceFound = true;
                         if (msc_debug_parser_data) PrintToLog("Resetting strReference as follows: %s \n ", strReference);
                     }
                 }
             }
         }
+        // if still not found, mean the only output is to exodus. Just make exodus as receiver.
+        if (!referenceFound) 
+            strReference = exodus_address;
+
         if (msc_debug_parser_data) PrintToLog("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference);
-        printf("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference.c_str());
+        PrintToConsole("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference);
         // ### CLASS B SPECIFC PARSING ###
         if (omniClass == OMNI_CLASS_B) {
             std::vector<std::string> multisig_script_data;

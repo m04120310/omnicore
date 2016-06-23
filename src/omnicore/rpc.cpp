@@ -87,6 +87,7 @@ void AllianceToJSON(AllianceInfo::Entry& entry, Object& alliance_obj) {
 void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
 {
     property_obj.push_back(Pair("name", sProperty.name));
+    property_obj.push_back(Pair("issuer", sProperty.issuer));
     property_obj.push_back(Pair("category", sProperty.category));
     property_obj.push_back(Pair("num_tokens", sProperty.num_tokens));
     property_obj.push_back(Pair("subcategory", sProperty.subcategory));
@@ -95,6 +96,16 @@ void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
     property_obj.push_back(Pair("divisible", sProperty.isDivisible()));
     property_obj.push_back(Pair("approve threshold", (uint16_t) sProperty.approve_threshold));
     property_obj.push_back(Pair("approve count", (uint16_t) sProperty.approve_count));
+    
+    if (sProperty.approve_count >= sProperty.approve_threshold) {
+        property_obj.push_back(Pair("isValid", "True"));
+    } else {
+        property_obj.push_back(Pair("isValid", "False"));
+    }
+
+    property_obj.push_back(Pair("money application", (int) sProperty.money_application));
+    property_obj.push_back(Pair("btc txid", sProperty.money_application_txid));
+
 }
 
 void MetaDexObjectToJSON(const CMPMetaDEx& obj, Object& metadex_obj)

@@ -79,6 +79,7 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_reward_token.manual = true;
     implied_reward_token.approve_count = 1;
     implied_reward_token.reject_count = 0; 
+    implied_reward_token.money_application = 0;
 
     implied_test_reward_token.issuer = ExodusAddress().ToString();
     implied_test_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
@@ -92,6 +93,7 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_test_reward_token.approve_threshold = 1;
     implied_test_reward_token.approve_count = 1;
     implied_test_reward_token.reject_count = 0; 
+    implied_test_reward_token.money_application = 0;
     init();
 }
 
@@ -1032,13 +1034,15 @@ void BTCTxRecordDB::clear() {
 bool BTCTxRecordDB::getBTCTxRecord(std::string address, uint32_t pid, std::string& txid) {
     // DB key for vote record entry
     std::string key;
-    char pidStr[10];
+    char pidStr[20];
     snprintf(pidStr, sizeof(pidStr), "%u", pid);
+
     key.append("btcTxRecord-");
     key.append(address);
     key.append("-");
     key.append(pidStr);
 
+    PrintToConsole("key: %s\n", key);
     // DB value for property entry
     leveldb::Status status = pdb->Get(readoptions, key, &txid);
     if (!status.ok()) {
@@ -1063,7 +1067,7 @@ bool BTCTxRecordDB::putBTCTxRecord(std::string address, uint32_t pid, std::strin
 
     // DB key for vote record entry
     std::string key;
-    char pidStr[10];
+    char pidStr[20];
     snprintf(pidStr, sizeof(pidStr), "%u", pid);
     key.append("btcTxRecord-");
     key.append(address);
@@ -1083,7 +1087,7 @@ bool BTCTxRecordDB::hasBTCTxRecord(std::string address, uint32_t pid) {
 bool BTCTxRecordDB::deleteBTCTxRecord(std::string address, uint32_t pid) {
     // DB key for vote record entry
     std::string key;
-    char pidStr[10];
+    char pidStr[20];
     snprintf(pidStr, sizeof(pidStr), "%u", pid);
     key.append("btcTxRecord-");
     key.append(address);
