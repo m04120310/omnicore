@@ -99,6 +99,22 @@ std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t property
     return payload;
 }
 
+std::vector<unsigned char> CreatePayload_RecordLicenseAndFund(uint32_t propertyId, uint32_t amount) {
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 503;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder32(propertyId);
+    mastercore::swapByteOrder32(amount);
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+    PUSH_BACK_BYTES(payload, amount);
+    
+    return payload;
+}
+
 std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name, std::string url, std::string data)
 {
     std::vector<unsigned char> payload;

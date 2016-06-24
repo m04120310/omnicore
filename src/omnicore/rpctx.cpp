@@ -178,7 +178,7 @@ Value gcoin_vote_for_license_and_fund(const Array& params, bool fHelp) {
     if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
         throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
     }
-    printf("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+    PrintToConsole("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_VoteForLicenseAndFund(propertyId, voteType);
 
@@ -219,7 +219,7 @@ Value gcoin_vote_for_alliance(const Array& params, bool fHelp) {
     if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
         throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
     }
-    printf("votedAddress: %s, voteType: %s\n", votedAddress.c_str(), voteType.c_str());
+    PrintToConsole("votedAddress: %s, voteType: %s\n", votedAddress.c_str(), voteType.c_str());
     // create a payload for the transaction
     std::vector<unsigned char> payload = CreatePayload_VoteForAlliance(voteType);
     
@@ -331,6 +331,35 @@ Value gcoin_apply_license_and_fund(const Array& params, bool fHelp) {
     uint256 txid;
     std::string rawHex;
     int result = ClassAgnosticWalletTXBuilder(fromAddress, "", "", 0, payload, txid, rawHex, autoCommit);
+    // check error and return the txid (or raw hex depending on autocommit)
+    if (result != 0) {
+        throw JSONRPCError(result, error_str(result));
+    } else {
+        if (!autoCommit) {
+            return rawHex;
+        } else {
+            return txid.GetHex();
+        }
+    }
+}
+
+Value send_from_address(const Array& params, bool fHelp) {
+    if (fHelp || params.size() < 3 || params.size() > 5)
+        throw runtime_error(
+            "fromaddress \"toaddress\" amount ( \"comment\" \"comment-to\" )\n"
+        );
+
+    std::string fromAddress = ParseAddress(params[0]);
+    std::string toAddress = ParseAddress(params[1]);
+    // Amount
+    int64_t amount = ParseAmount(params[2], true);
+
+    PrintToConsole("%s to %s, nAmount: %d\n", fromAddress, toAddress, amount);
+
+    uint256 txid;
+    std::string rawHex;
+    std::vector<unsigned char> payload;
+    int result = ClassAgnosticWalletTXBuilder(fromAddress, toAddress, "", amount, payload, txid, rawHex, true);
 
     // check error and return the txid (or raw hex depending on autocommit)
     if (result != 0) {

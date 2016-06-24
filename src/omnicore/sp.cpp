@@ -79,6 +79,7 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_reward_token.manual = true;
     implied_reward_token.approve_count = 1;
     implied_reward_token.reject_count = 0; 
+    implied_reward_token.money_application = 0;
 
     implied_test_reward_token.issuer = ExodusAddress().ToString();
     implied_test_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
@@ -92,6 +93,7 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_test_reward_token.approve_threshold = 1;
     implied_test_reward_token.approve_count = 1;
     implied_test_reward_token.reject_count = 0; 
+    implied_test_reward_token.money_application = 0;
     init();
 }
 
@@ -1014,6 +1016,95 @@ bool VoteRecordDB::deleteVoteRecord(std::string address, unsigned int txType, st
 }
 
 /* End of vote record db*/
+
+/* BTC tx Record DB */
+/* key: 
+    address: receiver address.
+    pid: property id.
+
+    value: txid
+*/
+
+void BTCTxRecordDB::clear() {
+    // wipe database via parent class
+    CDBBase::Clear();
+    // reset "next property identifiers"
+}
+
+bool BTCTxRecordDB::getBTCTxRecord(std::string address, uint32_t pid, std::string& txid) {
+    // DB key for vote record entry
+    std::string key;
+    char pidStr[20];
+    snprintf(pidStr, sizeof(pidStr), "%u", pid);
+
+    key.append("btcTxRecord-");
+    key.append(address);
+    key.append("-");
+    key.append(pidStr);
+
+    PrintToConsole("key: %s\n", key);
+    // DB value for property entry
+    leveldb::Status status = pdb->Get(readoptions, key, &txid);
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool BTCTxRecordDB::putBTCTxRecord(std::string address, uint32_t pid, std::string txid) {
+    // key is address
+    // if already exist, change to update.
+    if (!pdb) {
+        return false;
+    }
+    if (hasBTCTxRecord(address, pid)) {
+        return false;
+    }
+
+    // DB key for vote record entry
+    std::string key;
+    char pidStr[20];
+    snprintf(pidStr, sizeof(pidStr), "%u", pid);
+    key.append("btcTxRecord-");
+    key.append(address);
+    key.append("-");
+    key.append(pidStr);
+
+    leveldb::Status status = pdb->Put(writeoptions, key, txid);
+    PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
+    return status.ok();
+}
+
+bool BTCTxRecordDB::hasBTCTxRecord(std::string address, uint32_t pid) {
+    std::string tmp;
+    return getBTCTxRecord(address, pid, tmp);
+}
+
+bool BTCTxRecordDB::deleteBTCTxRecord(std::string address, uint32_t pid) {
+    // DB key for vote record entry
+    std::string key;
+    char pidStr[20];
+    snprintf(pidStr, sizeof(pidStr), "%u", pid);
+    key.append("btcTxRecord-");
+    key.append(address);
+    key.append("-");
+    key.append(pidStr);
+
+    if(!hasBTCTxRecord(address, pid)) {
+        PrintToLog("Delete vote record error. Try to delete non-exist btc tx record: addr: %s, pid: %u\n", address, pid);
+        return false;
+    }
+
+    leveldb::Status status = pdb->Delete(writeoptions, key);
+    return true;
+}
+
+/* End of btc tx record db*/
+
 
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
 {

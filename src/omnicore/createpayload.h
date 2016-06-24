@@ -10,6 +10,7 @@ std::vector<unsigned char> CreatePayload_Test_C(std::string data);
 std::vector<unsigned char> CreatePayload_Test_B(std::string data);
 std::vector<unsigned char> CreatePayload_VoteForLicense(uint32_t propertyId, std::string voteType);
 std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t propertyId, std::string voteType);
+std::vector<unsigned char> CreatePayload_RecordLicenseAndFund(uint32_t propertyId, uint32_t amount);
 std::vector<unsigned char> CreatePayload_VoteForAlliance(std::string voteType);
 std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name, std::string url, std::string data);
 std::vector<unsigned char> CreatePayload_ApplyLicenseAndFund(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
