@@ -1271,8 +1271,12 @@ public:
  * @param nFirstBlock[in]  The index of the first block to scan
  * @return An exit code, indicating success or failure
  */
-static int msc_initial_scan(int nFirstBlock)
-{
+void initRewardToken() {
+    update_tally_map(exodus_address, OMNI_PROPERTY_MSC, 100, BALANCE);
+    update_tally_map("mo6Npf8cgMHs82xsNLdNGGXLSYxu3YQCcz", OMNI_PROPERTY_MSC, 240, BALANCE);
+}
+
+static int msc_initial_scan(int nFirstBlock) {
     int nTimeBetweenProgressReports = GetArg("-omniprogressfrequency", 30);  // seconds
     int64_t nNow = GetTime();
     unsigned int nTxsTotal = 0;
@@ -1291,8 +1295,8 @@ static int msc_initial_scan(int nFirstBlock)
     bool seedBlockFilterEnabled = GetBoolArg("-omniseedblockfilter", true);
 
     // init reward token if scan from genesis block
-    if(nFirstBlock == GCOIN_FEATURE_START_BLOCK_HEIGHT) {
-        update_tally_map(exodus_address, OMNI_PROPERTY_MSC, GCOIN_REWARD_TOKEN_INIT_AMOUNT, BALANCE);
+    if (nFirstBlock == GCOIN_FEATURE_START_BLOCK_HEIGHT) {
+        initRewardToken();
     }
     
     for (nBlock = nFirstBlock; nBlock <= nLastBlock; ++nBlock)

@@ -266,7 +266,7 @@ public:
 
 private:
     /* Default to be exodus address. */
-    Entry firstAlliance;
+    std::vector<Entry> defaultAlliance;
 
 public:
     AllianceInfo(const boost::filesystem::path& path, bool fWipe) {
