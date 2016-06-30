@@ -69,7 +69,6 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     // special cases for constant SPs OMNI and TOMNI
     implied_reward_token.issuer = ExodusAddress().ToString();
     implied_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
-    implied_reward_token.num_tokens = 100;
     implied_reward_token.category = "N/A";
     implied_reward_token.subcategory = "N/A";
     implied_reward_token.name = "Reward token";
@@ -83,7 +82,6 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
 
     implied_test_reward_token.issuer = ExodusAddress().ToString();
     implied_test_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
-    implied_test_reward_token.num_tokens = 100;
     implied_test_reward_token.category = "N/A";
     implied_test_reward_token.subcategory = "N/A";
     implied_test_reward_token.name = "Reward token";
@@ -607,17 +605,33 @@ void AllianceInfo::clear() {
 
 void AllianceInfo::init() {
     // Init first alliance
+    Entry firstAlliance, secondAlliance;
+
     firstAlliance.address = ExodusAddress().ToString();
     firstAlliance.name = "Gcoin alliance";
     firstAlliance.url = "https://github.com/m04120310/omnicore";
     firstAlliance.data = "First alliance. Address is exodus address.";
     firstAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+
+    secondAlliance.address = "mo6Npf8cgMHs82xsNLdNGGXLSYxu3YQCcz";
+    secondAlliance.name = "Gcoin alliance 2";
+    secondAlliance.url = "https://www.facebook.com/m04120310";
+    secondAlliance.data = "Ugly-Wei";
+    secondAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+
+    defaultAlliance.push_back(firstAlliance);
+    defaultAlliance.push_back(secondAlliance);
 }
 
 bool AllianceInfo::updateAllianceInfo(std::string address, Entry& info) {
-    // cannot upddate implied SP
-    if (address == ExodusAddress().ToString()) {
-        return false;
+    // cannot upddate default alliances
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        Entry tmpEntry = defaultAlliance[i];
+        if (address == tmpEntry.address) {
+            PrintToConsole("Cannot update default alliance: %s info.", address);
+            PrintToLog("Cannot update default alliance: %s info.", address);
+            return false;
+        }
     }
 
     // DB key for property entry
@@ -701,9 +715,13 @@ AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, 
 }
 
 bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
-    if (address == ExodusAddress().ToString()) {
-        info = firstAlliance;
-        return true;
+    // if address is a member of default alliance
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        Entry tmpEntry = defaultAlliance[i];
+        if (address == tmpEntry.address) {
+            info = tmpEntry;
+            return true;
+        }
     }
 
     // DB key for property entry
@@ -733,9 +751,12 @@ bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
 }
 
 bool AllianceInfo::hasAllianceInfo(std::string address) {
-    // Special cases for constant SPs MSC and TMSC
-    if (address == ExodusAddress().ToString()) {
-        return true;
+    // if address is a member of default alliance
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        Entry tmpEntry = defaultAlliance[i];
+        if (address == tmpEntry.address) {
+            return true;
+        }
     }
 
     // DB key for property entry
@@ -751,8 +772,10 @@ bool AllianceInfo::hasAllianceInfo(std::string address) {
 }
 
 void AllianceInfo::printAll() {
-    // print off the hard coded firstAlliance
-    firstAlliance.print();
+    // print off the hard coded default alliances
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        defaultAlliance[i].print();
+    }
 
     leveldb::Iterator* iter = NewIterator();
 
@@ -780,8 +803,8 @@ void AllianceInfo::printAll() {
 }
 
 void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
-    // print off the hard coded firstAlliance
-    infoVec.push_back(firstAlliance);
+    // prepare default alliances
+    infoVec.insert(infoVec.end(), defaultAlliance.begin(), defaultAlliance.end());
 
     leveldb::Iterator* iter = NewIterator();
 
