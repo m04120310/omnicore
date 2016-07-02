@@ -101,8 +101,10 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "mkpobptP1mSS6uzDAUE7uh23Wgq4MvXbPN";
+static const string exodus_testnet = "mjZe4haCrjUcDHdGuX5kBn6sNhv65QTTRc";
 static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
+
+static const string multisig_treasury = "2N75etb378csmZYbEJtcLhcMNfwmeQ8JJV9";
 
 static int nWaterlineBlock = 0;
 
@@ -1272,8 +1274,9 @@ public:
  * @return An exit code, indicating success or failure
  */
 void initRewardToken() {
-    update_tally_map(exodus_address, GCOIN_TOKEN, 100, BALANCE);
-    update_tally_map("mo6Npf8cgMHs82xsNLdNGGXLSYxu3YQCcz", GCOIN_TOKEN, 240, BALANCE);
+    update_tally_map(exodus_address, OMNI_PROPERTY_MSC, 500, BALANCE);
+    update_tally_map("mm7JJBx74hBCR93hYiW7rY5oxEVTsXs4Yp", OMNI_PROPERTY_MSC, 240, BALANCE);
+    update_tally_map("muN6FNHipmchMamDhXEj9gdxz9HirA9XXF", OMNI_PROPERTY_MSC, 100, BALANCE);
 }
 
 static int msc_initial_scan(int nFirstBlock) {

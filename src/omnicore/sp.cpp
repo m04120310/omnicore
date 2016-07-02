@@ -627,22 +627,29 @@ void AllianceInfo::clear() {
 
 void AllianceInfo::init() {
     // Init first alliance
-    Entry firstAlliance, secondAlliance;
+    Entry firstAlliance, secondAlliance, thirdAlliance;
 
     firstAlliance.address = ExodusAddress().ToString();
     firstAlliance.name = "Gcoin alliance";
     firstAlliance.url = "https://github.com/m04120310/omnicore";
-    firstAlliance.data = "First alliance. Address is exodus address.";
+    firstAlliance.data = "Arbitrator";
     firstAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
 
-    secondAlliance.address = "mo6Npf8cgMHs82xsNLdNGGXLSYxu3YQCcz";
+    secondAlliance.address = "mm7JJBx74hBCR93hYiW7rY5oxEVTsXs4Yp";
     secondAlliance.name = "Gcoin alliance 2";
     secondAlliance.url = "https://www.facebook.com/m04120310";
-    secondAlliance.data = "Ugly-Wei";
+    secondAlliance.data = "Arbitrator";
     secondAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+
+    thirdAlliance.address = "muN6FNHipmchMamDhXEj9gdxz9HirA9XXF";
+    thirdAlliance.name = "Gcoin alliance 3";
+    thirdAlliance.url = "https://www.facebook.com/m04120310";
+    thirdAlliance.data = "";
+    thirdAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
 
     defaultAlliance.push_back(firstAlliance);
     defaultAlliance.push_back(secondAlliance);
+    defaultAlliance.push_back(thirdAlliance);
 }
 
 bool AllianceInfo::updateAllianceInfo(std::string address, Entry& info) {
