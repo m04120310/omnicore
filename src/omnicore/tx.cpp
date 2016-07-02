@@ -802,16 +802,27 @@ bool CMPTransaction::interpret_VoteForLicenseAndFund() {
 
     memcpy(&property, &pkt[4], 4);
     swapByteOrder32(property);
-
     PrintToConsole("%s(): property %d\n", __func__, property);
     PrintToLog("%s(): property %d\n", __func__, property);
 
     char *p = 8 + (char*) &pkt;
-    std::string tmp(p);
+    std::vector<std::string> spstr;
+    for (int i = 0; i <= 2; i++) {
+        spstr.push_back(std::string(p));
+        p += spstr.back().size() + 1;
+    }
+
+    // std::string tmp(p);
+    int i = 0;
     memset(voteType, 0, sizeof(voteType));
-    memcpy(voteType, tmp.c_str(), tmp.length());
+    memcpy(voteType, spstr[i].c_str(), spstr[i].length()); i++;
     PrintToConsole("%s(): voteType is %s\n", __func__, voteType);
     PrintToLog("%s(): voteType is %s\n", __func__, voteType);
+
+    memset(vote_data, 0, sizeof(vote_data));
+    memcpy(vote_data, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(vote_data)-1)); i++;
+    PrintToConsole("%s(): vote_data is %s\n", __func__, vote_data);
+    PrintToLog("%s(): vote_data is %s\n", __func__, vote_data);
 
     return true;
 }

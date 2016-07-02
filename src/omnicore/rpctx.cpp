@@ -161,26 +161,28 @@ Value gcoin_vote_for_license(const Array& params, bool fHelp) {
 
 // vote for license tx
 Value gcoin_vote_for_license_and_fund(const Array& params, bool fHelp) {
-    if (fHelp || params.size() != 3)
+    if (fHelp || params.size() != 4)
         throw runtime_error("vote for license tx argument error.\n"
-                             "params[0]: from address.\n"
-                             "params[1]: property id.\n"
-                             "params[2]: approve/reject\n");
+                             "params[0]: from address\n"
+                             "params[1]: property id\n"
+                             "params[2]: approve/reject\n"
+                             "params[3]: data\n");
 
     std::string fromAddress = ParseAddress(params[0]);
     uint32_t propertyId = ParsePropertyId(params[1]);
     std::string voteType = params[2].get_str();
+    std::string data = ParseText(params[3]);
 
     if (!allianceInfoDB->isAllianceApproved(fromAddress)) {
         throw runtime_error("From address is not a member of alliance.");
     }
-
     if (voteType.compare("approve") !=0 && voteType.compare("reject") != 0) {
         throw runtime_error("Vote type should be either \"approve\" or \"reject.\"");
     }
-    PrintToConsole("propertyId: %d, voteType: %s\n", propertyId, voteType.c_str());
+    PrintToConsole("propertyId: %d, voteType: %s\n, data: %s\n", propertyId, voteType.c_str(), data);
+
     // create a payload for the transaction
-    std::vector<unsigned char> payload = CreatePayload_VoteForLicenseAndFund(propertyId, voteType);
+    std::vector<unsigned char> payload = CreatePayload_VoteForLicenseAndFund(propertyId, voteType, data);
 
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;

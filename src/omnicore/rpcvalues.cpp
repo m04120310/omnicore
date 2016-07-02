@@ -139,8 +139,8 @@ uint32_t ParseMoneyApplication(const json_spirit::Value& value)
 std::string ParseText(const json_spirit::Value& value)
 {
     std::string text = value.get_str();
-    if (text.size() > 255) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Text must not be longer than 255 characters");
+    if (text.size() > 1024) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Text must not be longer than 1024 characters");
     }
     return text;
 }

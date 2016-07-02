@@ -75,6 +75,7 @@ private:
     // Gcoin vote system usage
     char voteType[10];
     uint16_t approve_threshold;
+    char vote_data[1024];
 
     // Gcoin License
     uint32_t money_application;

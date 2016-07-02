@@ -84,17 +84,22 @@ std::vector<unsigned char> CreatePayload_VoteForAlliance(std::string voteType) {
     return payload;
 }
 
-std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t propertyId, std::string voteType) {
+std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t propertyId, std::string voteType, std::string data) {
     std::vector<unsigned char> payload;
     uint16_t messageType = 502;
     uint16_t messageVer = 0;
     mastercore::swapByteOrder16(messageType);
     mastercore::swapByteOrder16(messageVer);
     mastercore::swapByteOrder32(propertyId);
+    if (data.size() > 1024) data = data.substr(0,1024);
+
     PUSH_BACK_BYTES(payload, messageVer);
     PUSH_BACK_BYTES(payload, messageType);
     PUSH_BACK_BYTES(payload, propertyId);
+
     payload.insert(payload.end(), voteType.begin(), voteType.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), data.begin(), data.end());
     payload.push_back('\0');
     return payload;
 }
