@@ -62,36 +62,53 @@ void CMPSPInfo::Entry::print() const
 
 CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
 {
-    printf("sp db path: %s\n", path.string().c_str());
+    PrintToConsole("sp db path: %s\n", path.string().c_str());
     leveldb::Status status = Open(path, fWipe);
     PrintToConsole("Loading smart property database: %s\n", status.ToString());
 
-    // special cases for constant SPs OMNI and TOMNI
-    implied_reward_token.issuer = ExodusAddress().ToString();
-    implied_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
-    implied_reward_token.category = "N/A";
-    implied_reward_token.subcategory = "N/A";
-    implied_reward_token.name = "Reward token";
-    implied_reward_token.url = "";
-    implied_reward_token.data = "Reward token demo.";
-    implied_reward_token.approve_threshold = 1;
-    implied_reward_token.manual = true;
-    implied_reward_token.approve_count = 1;
-    implied_reward_token.reject_count = 0; 
-    implied_reward_token.money_application = 0;
+    // special cases for constant GCOIN vote weight token
+    implied_gcoin_token.issuer = ExodusAddress().ToString();
+    implied_gcoin_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
+    implied_gcoin_token.category = "N/A";
+    implied_gcoin_token.subcategory = "N/A";
+    implied_gcoin_token.name = "GCOIN vote weight token";
+    implied_gcoin_token.url = "";
+    implied_gcoin_token.data = "GCOIN vote weight token.";
+    implied_gcoin_token.approve_threshold = 1;
+    implied_gcoin_token.manual = true;
+    implied_gcoin_token.approve_count = 1;
+    implied_gcoin_token.reject_count = 0; 
+    implied_gcoin_token.money_application = 0;
 
-    implied_test_reward_token.issuer = ExodusAddress().ToString();
-    implied_test_reward_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
-    implied_test_reward_token.category = "N/A";
-    implied_test_reward_token.subcategory = "N/A";
-    implied_test_reward_token.name = "Reward token";
-    implied_test_reward_token.url = "";
-    implied_test_reward_token.data = "Reward token demo.";
-    implied_test_reward_token.manual = true;
-    implied_test_reward_token.approve_threshold = 1;
-    implied_test_reward_token.approve_count = 1;
-    implied_test_reward_token.reject_count = 0; 
-    implied_test_reward_token.money_application = 0;
+    // special cases for constant SPs OMNI and TOMNI
+    implied_omni.issuer = ExodusAddress().ToString();
+    implied_omni.prop_type = MSC_PROPERTY_TYPE_DIVISIBLE;
+    implied_omni.num_tokens = 700000;
+    implied_omni.category = "N/A";
+    implied_omni.subcategory = "N/A";
+    implied_omni.name = "Omni";
+    implied_omni.url = "http://www.omnilayer.org";
+    implied_omni.data = "Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
+    implied_omni.approve_threshold = 1;
+    implied_omni.manual = true;
+    implied_omni.approve_count = 1;
+    implied_omni.reject_count = 0; 
+    implied_omni.money_application = 0;
+
+    implied_tomni.issuer = ExodusAddress().ToString();
+    implied_tomni.prop_type = MSC_PROPERTY_TYPE_DIVISIBLE;
+    implied_tomni.num_tokens = 700000;
+    implied_tomni.category = "N/A";
+    implied_tomni.subcategory = "N/A";
+    implied_tomni.name = "Test Omni";
+    implied_tomni.url = "http://www.omnilayer.org";
+    implied_tomni.data = "Test Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
+    implied_tomni.manual = true;
+    implied_tomni.approve_threshold = 1;
+    implied_tomni.approve_count = 1;
+    implied_tomni.reject_count = 0; 
+    implied_tomni.money_application = 0;
+
     init();
 }
 
@@ -110,7 +127,7 @@ void CMPSPInfo::Clear()
 
 void CMPSPInfo::init(uint32_t nextSPID, uint32_t nextTestSPID)
 {
-    printf("CMPSPInfo::init nextSPID:%d, nextTestSPID:%d\n", nextSPID, nextTestSPID);
+    PrintToConsole("CMPSPInfo::init nextSPID:%d, nextTestSPID:%d\n", nextSPID, nextTestSPID);
     next_spid = nextSPID;
     next_test_spid = nextTestSPID;
 }
@@ -138,7 +155,9 @@ bool CMPSPInfo::updateSP(uint32_t propertyId, const Entry& info)
     PrintToLog("%s(propertyId=%d)\n", __func__, propertyId);
 
     // cannot update implied SP
-    if (OMNI_PROPERTY_MSC == propertyId || OMNI_PROPERTY_TMSC == propertyId) {
+    if (OMNI_PROPERTY_MSC == propertyId || 
+        OMNI_PROPERTY_TMSC == propertyId || 
+        GCOIN_TOKEN == propertyId) {
         return false;
     }
 
@@ -247,10 +266,13 @@ bool CMPSPInfo::getSP(uint32_t propertyId, Entry& info) const
 {
     // special cases for constant SPs MSC and TMSC
     if (OMNI_PROPERTY_MSC == propertyId) {
-        info = implied_reward_token;
+        info = implied_omni;
         return true;
     } else if (OMNI_PROPERTY_TMSC == propertyId) {
-        info = implied_test_reward_token;
+        info = implied_tomni;
+        return true;
+    } else if (GCOIN_TOKEN == propertyId) {
+        info = implied_gcoin_token;
         return true;
     }
 
@@ -283,7 +305,9 @@ bool CMPSPInfo::getSP(uint32_t propertyId, Entry& info) const
 bool CMPSPInfo::hasSP(uint32_t propertyId) const
 {
     // Special cases for constant SPs MSC and TMSC
-    if (OMNI_PROPERTY_MSC == propertyId || OMNI_PROPERTY_TMSC == propertyId) {
+    if (OMNI_PROPERTY_MSC == propertyId || 
+        OMNI_PROPERTY_TMSC == propertyId || 
+        GCOIN_TOKEN == propertyId) {
         return true;
     }
 
@@ -840,7 +864,7 @@ uint32_t AllianceInfo::getApproveThreshold() {
     for (unsigned int i=0; i<infoVec.size(); i++) {
         if (infoVec[i].status == ALLIANCE_INFO_STATUS_APPROVED) {
             if (GCOIN_USE_WEIGHTED_ALLIANCE) {
-                int64_t balance = getMPbalance(infoVec[i].address, OMNI_PROPERTY_MSC, BALANCE);
+                int64_t balance = getMPbalance(infoVec[i].address, GCOIN_TOKEN, BALANCE);
                 approveThreshold += (uint32_t) balance;
             } else {
                 approveThreshold += 1;

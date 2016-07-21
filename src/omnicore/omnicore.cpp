@@ -1272,8 +1272,8 @@ public:
  * @return An exit code, indicating success or failure
  */
 void initRewardToken() {
-    update_tally_map(exodus_address, OMNI_PROPERTY_MSC, 100, BALANCE);
-    update_tally_map("mo6Npf8cgMHs82xsNLdNGGXLSYxu3YQCcz", OMNI_PROPERTY_MSC, 240, BALANCE);
+    update_tally_map(exodus_address, GCOIN_TOKEN, 100, BALANCE);
+    update_tally_map("mo6Npf8cgMHs82xsNLdNGGXLSYxu3YQCcz", GCOIN_TOKEN, 240, BALANCE);
 }
 
 static int msc_initial_scan(int nFirstBlock) {
