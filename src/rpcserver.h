@@ -268,7 +268,6 @@ extern json_spirit::Value omni_sendcanceltradesbyprice(const json_spirit::Array&
 extern json_spirit::Value omni_sendcanceltradesbypair(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value omni_sendcancelalltrades(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value omni_sendsto(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value omni_sendgrant(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value omni_sendrevoke(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value omni_sendclosecrowdsale(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value omni_sendchangeissuer(const json_spirit::Array& params, bool fHelp);
@@ -331,6 +330,7 @@ extern json_spirit::Value test_class_c(const json_spirit::Array& params, bool fH
 extern json_spirit::Value test_class_b(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value test_multisig_tx(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_vote_for_license(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value gcoin_mint_license(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_vote_for_alliance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_apply_alliance(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value gcoin_get_alliance_info_list(const json_spirit::Array& params, bool fHelp);

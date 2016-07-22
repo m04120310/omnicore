@@ -401,7 +401,6 @@ static const CRPCCommand vRPCCommands[] =
     { "omni layer (transaction creation)",   "omni_sendcanceltradesbypair",     &omni_sendcanceltradesbypair,     false,      true,       true },
     { "omni layer (transaction creation)",   "omni_sendcancelalltrades",        &omni_sendcancelalltrades,        false,      true,       true },
     { "omni layer (transaction creation)",   "omni_sendsto",                    &omni_sendsto,                    false,      true,       true },
-    { "omni layer (transaction creation)",   "omni_sendgrant",                  &omni_sendgrant,                  false,      true,       true },
     { "omni layer (transaction creation)",   "omni_sendrevoke",                 &omni_sendrevoke,                 false,      true,       true },
     { "omni layer (transaction creation)",   "omni_sendclosecrowdsale",         &omni_sendclosecrowdsale,         false,      true,       true },
     { "omni layer (transaction creation)",   "omni_sendchangeissuer",           &omni_sendchangeissuer,           false,      true,       true },
@@ -473,10 +472,12 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",                              "gcoin_vote_for_alliance",         &gcoin_vote_for_alliance,         false,      true,       true },
     { "hidden",                              "gcoin_apply_alliance",            &gcoin_apply_alliance,            false,      true,       true },
     { "hidden",                              "gcoin_get_alliance_info_list",    &gcoin_get_alliance_info_list,    false,      true,       false },
-    { "hidden",                              "gcoin_get_alliacne_info_by_address",    &gcoin_get_alliacne_info_by_address,       false, true, false },
-    { "hidden",                              "gcoin_apply_license_and_fund",      &gcoin_apply_license_and_fund,             false, true, true  },
-    { "hidden",                              "gcoin_vote_for_license_and_fund",  &gcoin_vote_for_license_and_fund,           false, true, true  },
-    { "hidden",                              "send_from_address",               &send_from_address,                false,   true,       true },
+    { "hidden",                              "gcoin_get_alliacne_info_by_address",    &gcoin_get_alliacne_info_by_address,   false, true, false },
+    { "hidden",                              "gcoin_apply_license_and_fund",    &gcoin_apply_license_and_fund,    false,      true,       true  },
+    { "hidden",                              "gcoin_vote_for_license_and_fund", &gcoin_vote_for_license_and_fund, false,      true,       true  },
+    { "hidden",                              "send_from_address",               &send_from_address,               false,      true,       true },
+    { "omni layer (transaction creation)",   "gcoin_mint_license",              &gcoin_mint_license,              false,      true,       true },
+
 };
 
 CRPCTable::CRPCTable()

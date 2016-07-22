@@ -71,7 +71,7 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_gcoin_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
     implied_gcoin_token.category = "N/A";
     implied_gcoin_token.subcategory = "N/A";
-    implied_gcoin_token.name = "GCOIN vote weight token";
+    implied_gcoin_token.name = "GCOIN token";
     implied_gcoin_token.url = "";
     implied_gcoin_token.data = "GCOIN vote weight token.";
     implied_gcoin_token.approve_threshold = 1;
@@ -90,7 +90,6 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_omni.url = "http://www.omnilayer.org";
     implied_omni.data = "Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
     implied_omni.approve_threshold = 1;
-    implied_omni.manual = true;
     implied_omni.approve_count = 1;
     implied_omni.reject_count = 0; 
     implied_omni.money_application = 0;
@@ -103,7 +102,6 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_tomni.name = "Test Omni";
     implied_tomni.url = "http://www.omnilayer.org";
     implied_tomni.data = "Test Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
-    implied_tomni.manual = true;
     implied_tomni.approve_threshold = 1;
     implied_tomni.approve_count = 1;
     implied_tomni.reject_count = 0; 

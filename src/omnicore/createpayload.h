@@ -29,7 +29,7 @@ std::vector<unsigned char> CreatePayload_IssuanceVariable(uint8_t ecosystem, uin
 std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
                                                        std::string subcategory, std::string name, std::string url, std::string data);
 std::vector<unsigned char> CreatePayload_CloseCrowdsale(uint32_t propertyId);
-std::vector<unsigned char> CreatePayload_Grant(uint32_t propertyId, uint64_t amount, std::string memo);
+std::vector<unsigned char> CreatePayload_MintLicense(uint32_t propertyId, uint64_t amount, std::string memo);
 std::vector<unsigned char> CreatePayload_Revoke(uint32_t propertyId, uint64_t amount, std::string memo);
 std::vector<unsigned char> CreatePayload_ChangeIssuer(uint32_t propertyId);
 std::vector<unsigned char> CreatePayload_MetaDExTrade(uint32_t propertyIdForSale, uint64_t amountForSale, uint32_t propertyIdDesired, uint64_t amountDesired);
