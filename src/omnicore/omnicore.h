@@ -64,7 +64,7 @@ int const MAX_STATE_HISTORY = 50;
 // Gcoin license's threshold percentage(approve vote from alliances)
 #define LICENSE_APPROVE_PERCENTAGE 2.0/3.0
 #define ALLIANCE_APPROVE_PERCENTAGE 2.0/3.0
-#define GCOIN_FEATURE_START_BLOCK_HEIGHT 872937
+#define GCOIN_FEATURE_START_BLOCK_HEIGHT 898572
 #define GCOIN_USE_WEIGHTED_ALLIANCE 1
 
 // Transaction types, from the spec
@@ -144,6 +144,7 @@ enum FILETYPES {
 #define OMNI_PROPERTY_BTC   0
 #define OMNI_PROPERTY_MSC   1
 #define OMNI_PROPERTY_TMSC  2
+#define GCOIN_TOKEN 3
 
 // forward declarations
 std::string FormatDivisibleMP(int64_t amount, bool fSign = false);

@@ -2230,7 +2230,9 @@ int CMPTransaction::logicMath_VoteForLicense() {
     printf("%s(): property %u\n", __func__, property);
     PrintToLog("%s(): property %u\n", __func__, property);
 
-    if (OMNI_PROPERTY_MSC == property || OMNI_PROPERTY_TMSC == property) {
+    if (OMNI_PROPERTY_MSC == property || 
+        OMNI_PROPERTY_TMSC == property ||
+        GCOIN_TOKEN == property) {
         return false;
     }
 
@@ -2277,7 +2279,7 @@ int CMPTransaction::logicMath_VoteForLicense() {
     std::string voteTypeString(voteType);
     uint32_t weightedVote = 1;
     if (GCOIN_USE_WEIGHTED_ALLIANCE) {
-        weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
+        weightedVote = (uint32_t) getMPbalance(sender, GCOIN_TOKEN, BALANCE);
     } 
     // If this is a new vote
     if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
@@ -2349,7 +2351,7 @@ int CMPTransaction::logicMath_VoteForAlliance() {
     std::string voteTypeString(voteType);
     uint32_t weightedVote = 1;
     if (GCOIN_USE_WEIGHTED_ALLIANCE) {
-        weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
+        weightedVote = (uint32_t) getMPbalance(sender, GCOIN_TOKEN, BALANCE);
     }
     // If this is a new vote
     if (!voteRecordDB->hasVoteRecord(sender, 400, receiver)) {
@@ -2397,7 +2399,9 @@ int CMPTransaction::logicMath_VoteForLicenseAndFund() {
     printf("%s(): property %u\n", __func__, property);
     PrintToLog("%s(): property %u\n", __func__, property);
 
-    if (OMNI_PROPERTY_MSC == property || OMNI_PROPERTY_TMSC == property) {
+    if (OMNI_PROPERTY_MSC == property || 
+        OMNI_PROPERTY_TMSC == property ||
+        GCOIN_TOKEN == property) {
         return false;
     }
 
@@ -2447,7 +2451,7 @@ int CMPTransaction::logicMath_VoteForLicenseAndFund() {
     std::string voteTypeString(voteType);
     uint32_t weightedVote = 1;
     if (GCOIN_USE_WEIGHTED_ALLIANCE) {
-        weightedVote = (uint32_t) getMPbalance(sender, OMNI_PROPERTY_MSC, BALANCE);
+        weightedVote = (uint32_t) getMPbalance(sender, GCOIN_TOKEN, BALANCE);
     }
     // If this is a new vote
     if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
@@ -2516,7 +2520,9 @@ int CMPTransaction::logicMath_RecordLicenseAndFund() {
     PrintToConsole("%s(): property %u\n", __func__, property);
     PrintToLog("%s(): property %u\n", __func__, property);
 
-    if (OMNI_PROPERTY_MSC == property || OMNI_PROPERTY_TMSC == property) {
+    if (OMNI_PROPERTY_MSC == property || 
+        OMNI_PROPERTY_TMSC == property ||
+        GCOIN_TOKEN == property) {
         return false;
     }
 

@@ -913,14 +913,14 @@ Value omni_sendsto(const Array& params, bool fHelp)
     }
 }
 
-// omni_sendgrant - Grant tokens
-Value omni_sendgrant(const Array& params, bool fHelp)
+// gcoin mint token (Original omni_sendgrant - Grant tokens)
+Value gcoin_mint_license(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 4 || params.size() > 5)
         throw runtime_error(
-            "omni_sendgrant \"fromaddress\" \"toaddress\" propertyid \"amount\" ( \"memo\" )\n"
+            "gcoin_mint_license \"fromaddress\" \"toaddress\" propertyid \"amount\" ( \"memo\" )\n"
 
-            "\nIssue or grant new units of managed tokens.\n"
+            "\nIssue or mint new units of managed tokens.\n"
 
             "\nArguments:\n"
             "1. fromaddress          (string, required) the address to send from\n"
@@ -933,8 +933,8 @@ Value omni_sendgrant(const Array& params, bool fHelp)
             "\"hash\"                  (string) the hex-encoded transaction hash\n"
 
             "\nExamples:\n"
-            + HelpExampleCli("omni_sendgrant", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\" \"\" 51 \"7000\"")
-            + HelpExampleRpc("omni_sendgrant", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\", \"\", 51, \"7000\"")
+            + HelpExampleCli("gcoin_mint_license", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\" \"\" 51 \"7000\"")
+            + HelpExampleRpc("gcoin_mint_license", "\"3HsJvhr9qzgRe3ss97b1QHs38rmaLExLcH\", \"\", 51, \"7000\"")
         );
 
     // obtain parameters & info
@@ -950,7 +950,7 @@ Value omni_sendgrant(const Array& params, bool fHelp)
     RequireTokenIssuer(fromAddress, propertyId);
 
     // create a payload for the transaction
-    std::vector<unsigned char> payload = CreatePayload_Grant(propertyId, amount, memo);
+    std::vector<unsigned char> payload = CreatePayload_MintLicense(propertyId, amount, memo);
 
     // request the wallet build the transaction (and if needed commit it)
     uint256 txid;

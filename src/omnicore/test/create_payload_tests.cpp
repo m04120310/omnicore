@@ -293,8 +293,8 @@ BOOST_AUTO_TEST_CASE(payload_create_managed_property_full)
 
 BOOST_AUTO_TEST_CASE(payload_grant_tokens)
 {
-    // Grant tokens [type 55, version 0]
-    std::vector<unsigned char> vch = CreatePayload_Grant(
+    // mint tokens [type 55, version 0]
+    std::vector<unsigned char> vch = CreatePayload_MintLicense(
         static_cast<uint32_t>(8),                  // property: SP #8
         static_cast<int64_t>(1000),                // number of units to issue
         std::string("First Milestone Reached!"));  // additional information
@@ -306,8 +306,8 @@ BOOST_AUTO_TEST_CASE(payload_grant_tokens)
 
 BOOST_AUTO_TEST_CASE(payload_grant_tokens_empty)
 {
-    // Grant tokens [type 55, version 0]
-    std::vector<unsigned char> vch = CreatePayload_Grant(
+    // Mint tokens [type 55, version 0]
+    std::vector<unsigned char> vch = CreatePayload_MintLicense(
         static_cast<uint32_t>(8),                  // property: SP #8
         static_cast<int64_t>(1000),                // number of units to issue
         std::string(""));                          // additional information
@@ -317,8 +317,8 @@ BOOST_AUTO_TEST_CASE(payload_grant_tokens_empty)
 
 BOOST_AUTO_TEST_CASE(payload_grant_tokens_full)
 {
-    // Grant tokens [type 55, version 0]
-    std::vector<unsigned char> vch = CreatePayload_Grant(
+    // Mint tokens [type 55, version 0]
+    std::vector<unsigned char> vch = CreatePayload_MintLicense(
         static_cast<uint32_t>(8),                  // property: SP #8
         static_cast<int64_t>(1000),                // number of units to issue
         std::string(700, 'x'));                    // additional information

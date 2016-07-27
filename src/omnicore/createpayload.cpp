@@ -427,7 +427,7 @@ std::vector<unsigned char> CreatePayload_CloseCrowdsale(uint32_t propertyId)
     return payload;
 }
 
-std::vector<unsigned char> CreatePayload_Grant(uint32_t propertyId, uint64_t amount, std::string memo)
+std::vector<unsigned char> CreatePayload_MintLicense(uint32_t propertyId, uint64_t amount, std::string memo)
 {
     std::vector<unsigned char> payload;
     uint16_t messageType = 55;

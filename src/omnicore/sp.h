@@ -142,8 +142,9 @@ public:
 
 private:
     // implied version of OMNI and TOMNI so they don't hit the leveldb
-    Entry implied_reward_token;
-    Entry implied_test_reward_token;
+    Entry implied_gcoin_token;
+    Entry implied_omni;
+    Entry implied_tomni;
 
     uint32_t next_spid;
     uint32_t next_test_spid;
