@@ -23,6 +23,7 @@
 #include "leveldb/write_batch.h"
 
 #include <stdint.h>
+#include <math.h>
 
 #include <map>
 #include <string>
@@ -61,8 +62,23 @@ void CMPSPInfo::Entry::print() const
 
 CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
 {
+    PrintToConsole("sp db path: %s\n", path.string().c_str());
     leveldb::Status status = Open(path, fWipe);
     PrintToConsole("Loading smart property database: %s\n", status.ToString());
+
+    // special cases for constant GCOIN vote weight token
+    implied_gcoin_token.issuer = ExodusAddress().ToString();
+    implied_gcoin_token.prop_type = MSC_PROPERTY_TYPE_INDIVISIBLE;
+    implied_gcoin_token.category = "N/A";
+    implied_gcoin_token.subcategory = "N/A";
+    implied_gcoin_token.name = "GCOIN token";
+    implied_gcoin_token.url = "";
+    implied_gcoin_token.data = "GCOIN vote weight token.";
+    implied_gcoin_token.approve_threshold = 1;
+    implied_gcoin_token.manual = true;
+    implied_gcoin_token.approve_count = 1;
+    implied_gcoin_token.reject_count = 0; 
+    implied_gcoin_token.money_application = 0;
 
     // special cases for constant SPs OMNI and TOMNI
     implied_omni.issuer = ExodusAddress().ToString();
@@ -73,6 +89,11 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_omni.name = "Omni";
     implied_omni.url = "http://www.omnilayer.org";
     implied_omni.data = "Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
+    implied_omni.approve_threshold = 1;
+    implied_omni.approve_count = 1;
+    implied_omni.reject_count = 0; 
+    implied_omni.money_application = 0;
+
     implied_tomni.issuer = ExodusAddress().ToString();
     implied_tomni.prop_type = MSC_PROPERTY_TYPE_DIVISIBLE;
     implied_tomni.num_tokens = 700000;
@@ -81,6 +102,10 @@ CMPSPInfo::CMPSPInfo(const boost::filesystem::path& path, bool fWipe)
     implied_tomni.name = "Test Omni";
     implied_tomni.url = "http://www.omnilayer.org";
     implied_tomni.data = "Test Omni serve as the binding between Bitcoin, smart properties and contracts created on the Omni Layer.";
+    implied_tomni.approve_threshold = 1;
+    implied_tomni.approve_count = 1;
+    implied_tomni.reject_count = 0; 
+    implied_tomni.money_application = 0;
 
     init();
 }
@@ -100,6 +125,7 @@ void CMPSPInfo::Clear()
 
 void CMPSPInfo::init(uint32_t nextSPID, uint32_t nextTestSPID)
 {
+    PrintToConsole("CMPSPInfo::init nextSPID:%d, nextTestSPID:%d\n", nextSPID, nextTestSPID);
     next_spid = nextSPID;
     next_test_spid = nextTestSPID;
 }
@@ -124,22 +150,29 @@ uint32_t CMPSPInfo::peekNextSPID(uint8_t ecosystem) const
 
 bool CMPSPInfo::updateSP(uint32_t propertyId, const Entry& info)
 {
+    PrintToLog("%s(propertyId=%d)\n", __func__, propertyId);
+
     // cannot update implied SP
-    if (OMNI_PROPERTY_MSC == propertyId || OMNI_PROPERTY_TMSC == propertyId) {
+    if (OMNI_PROPERTY_MSC == propertyId || 
+        OMNI_PROPERTY_TMSC == propertyId || 
+        GCOIN_TOKEN == propertyId) {
         return false;
     }
 
+    PrintToLog("updateSP(): DB key for property entry\n");
     // DB key for property entry
     CDataStream ssSpKey(SER_DISK, CLIENT_VERSION);
     ssSpKey << std::make_pair('s', propertyId);
     leveldb::Slice slSpKey(&ssSpKey[0], ssSpKey.size());
 
+    PrintToLog("updateSP(): DB value for property entry\n");
     // DB value for property entry
     CDataStream ssSpValue(SER_DISK, CLIENT_VERSION);
     ssSpValue.reserve(ssSpValue.GetSerializeSize(info));
     ssSpValue << info;
     leveldb::Slice slSpValue(&ssSpValue[0], ssSpValue.size());
 
+    PrintToLog("updateSP(): DB key for historical property entry\n");
     // DB key for historical property entry
     CDataStream ssSpPrevKey(SER_DISK, CLIENT_VERSION);
     ssSpPrevKey << 'b';
@@ -150,6 +183,7 @@ bool CMPSPInfo::updateSP(uint32_t propertyId, const Entry& info)
     leveldb::WriteBatch batch;
     std::string strSpPrevValue;
 
+    PrintToLog("updateSP(): if a value exists move it to the old key\n");
     // if a value exists move it to the old key
     if (!pdb->Get(readoptions, slSpKey, &strSpPrevValue).IsNotFound()) {
         batch.Put(slSpPrevKey, strSpPrevValue);
@@ -235,6 +269,9 @@ bool CMPSPInfo::getSP(uint32_t propertyId, Entry& info) const
     } else if (OMNI_PROPERTY_TMSC == propertyId) {
         info = implied_tomni;
         return true;
+    } else if (GCOIN_TOKEN == propertyId) {
+        info = implied_gcoin_token;
+        return true;
     }
 
     // DB key for property entry
@@ -266,7 +303,9 @@ bool CMPSPInfo::getSP(uint32_t propertyId, Entry& info) const
 bool CMPSPInfo::hasSP(uint32_t propertyId) const
 {
     // Special cases for constant SPs MSC and TMSC
-    if (OMNI_PROPERTY_MSC == propertyId || OMNI_PROPERTY_TMSC == propertyId) {
+    if (OMNI_PROPERTY_MSC == propertyId || 
+        OMNI_PROPERTY_TMSC == propertyId || 
+        GCOIN_TOKEN == propertyId) {
         return true;
     }
 
@@ -385,7 +424,6 @@ int64_t CMPSPInfo::popBlock(const uint256& block_hash)
         PrintToLog("%s(): ERROR: %s\n", __func__, status.ToString());
         return -4;
     }
-
     return remainingSPs;
 }
 
@@ -425,7 +463,6 @@ bool CMPSPInfo::getWatermark(uint256& watermark) const
         }
         return false;
     }
-
     try {
         CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
         ssValue >> watermark;
@@ -561,6 +598,565 @@ CMPCrowd* mastercore::getCrowd(const std::string& address)
 
     return (CMPCrowd *)NULL;
 }
+
+// Alliance related
+
+void AllianceInfo::Entry::print() {
+    PrintToConsole("\n\taddress: %s\n\tname: %s\n\turl: %s\n\tdata: %s\n\talliance status: %s\n", address, name, url, data, getStatusString());
+}
+
+std::string AllianceInfo::Entry::getStatusString() {
+    switch(status) {
+        case ALLIANCE_INFO_STATUS_APPROVED:
+            return "Approved";
+        case ALLIANCE_INFO_STATUS_PENDING:
+            return "Pending";
+        case ALLIANCE_INFO_STATUS_REJECTED:
+            return "Rejected";
+        default:
+            return "Status error";
+    }
+}
+
+void AllianceInfo::clear() {
+    // wipe database via parent class
+    CDBBase::Clear();
+    // reset "next property identifiers"
+    init();
+}
+
+void AllianceInfo::init() {
+    // Init first alliance
+    Entry firstAlliance, secondAlliance, thirdAlliance;
+
+    firstAlliance.address = ExodusAddress().ToString();
+    firstAlliance.name = "Gcoin alliance";
+    firstAlliance.url = "https://github.com/m04120310/omnicore";
+    firstAlliance.data = "Arbitrator";
+    firstAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+
+    secondAlliance.address = "mm7JJBx74hBCR93hYiW7rY5oxEVTsXs4Yp";
+    secondAlliance.name = "Gcoin alliance 2";
+    secondAlliance.url = "https://www.facebook.com/m04120310";
+    secondAlliance.data = "Arbitrator";
+    secondAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+
+    thirdAlliance.address = "muN6FNHipmchMamDhXEj9gdxz9HirA9XXF";
+    thirdAlliance.name = "Gcoin alliance 3";
+    thirdAlliance.url = "https://www.facebook.com/m04120310";
+    thirdAlliance.data = "";
+    thirdAlliance.status = ALLIANCE_INFO_STATUS_APPROVED;
+
+    defaultAlliance.push_back(firstAlliance);
+    defaultAlliance.push_back(secondAlliance);
+    defaultAlliance.push_back(thirdAlliance);
+}
+
+bool AllianceInfo::updateAllianceInfo(std::string address, Entry& info) {
+    // cannot upddate default alliances
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        Entry tmpEntry = defaultAlliance[i];
+        if (address == tmpEntry.address) {
+            PrintToConsole("Cannot update default alliance: %s info.", address);
+            PrintToLog("Cannot update default alliance: %s info.", address);
+            return false;
+        }
+    }
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    Entry tmpEntry;
+    std::string strSpValue;
+    if (!pdb->Get(readoptions, slAllianceKey, &strSpValue).IsNotFound()) {
+        CDataStream oldDataValue(strSpValue.data(), strSpValue.data() + strSpValue.size(), SER_DISK, CLIENT_VERSION);
+        oldDataValue >> tmpEntry;
+        info.creation_block = tmpEntry.creation_block;
+
+        CDataStream ssAllianceValue(SER_DISK, CLIENT_VERSION);
+        ssAllianceValue.reserve(ssAllianceValue.GetSerializeSize(info));
+        ssAllianceValue << info;
+        leveldb::Slice slAllianceValue(&ssAllianceValue[0], ssAllianceValue.size());
+        leveldb::Status status = pdb->Put(writeoptions, slAllianceKey, slAllianceValue);
+
+        if (!status.ok()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+            return false;
+        }
+    } else {
+        PrintToLog("Attemp to update non-exist alliance.\n");
+        PrintToConsole("Attemp to update non-exist alliance.\n");
+        return false;
+    }
+
+
+    return true;
+}
+
+bool AllianceInfo::putAllianceInfo(std::string address, Entry& info) {
+    // key is address
+    // if already exist, change to update.
+    if (!pdb) {
+        return false;
+    }
+    if (address == ExodusAddress().ToString()) {
+        return false;
+    }
+    if (hasAllianceInfo(address)) {
+        return updateAllianceInfo(address, info);
+    }
+
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    CDataStream ssAllianceValue(SER_DISK, CLIENT_VERSION);
+    ssAllianceValue.reserve(ssAllianceValue.GetSerializeSize(info));
+    ssAllianceValue << info;
+    leveldb::Slice slAllianceValue(&ssAllianceValue[0], ssAllianceValue.size());
+
+    leveldb::Status status = pdb->Put(writeoptions, slAllianceKey, slAllianceValue);
+    PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
+    return status.ok();
+}
+
+AllianceInfo::Entry AllianceInfo::allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold,
+                                                           std::string data, uint256 txid, uint256 blockId) {
+    AllianceInfo::Entry entry;
+    entry.address = address;
+    entry.name = name;
+    entry.url = url;
+    entry.data = data;
+    entry.txid = txid;
+    entry.creation_block = blockId;
+    entry.update_block = blockId;
+    entry.approve_threshold = approve_threshold;
+
+    entry.approve_count = 0;
+    entry.reject_count = 0;
+    entry.status = ALLIANCE_INFO_STATUS_PENDING;
+
+    return entry;
+}
+
+bool AllianceInfo::getAllianceInfo(std::string address, Entry& info) {
+    // if address is a member of default alliance
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        Entry tmpEntry = defaultAlliance[i];
+        if (address == tmpEntry.address) {
+            info = tmpEntry;
+            return true;
+        }
+    }
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    // DB value for property entry
+    std::string strAllianceValue;
+    leveldb::Status status = pdb->Get(readoptions, slAllianceKey, &strAllianceValue);
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+        }
+        return false;
+    }
+
+    try {
+        CDataStream ssAllianceValue(strAllianceValue.data(), strAllianceValue.data() + strAllianceValue.size(), SER_DISK, CLIENT_VERSION);
+        ssAllianceValue >> info;
+    } catch (const std::exception& e) {
+        PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, e.what());
+        return false;
+    }
+
+    return true;
+}
+
+bool AllianceInfo::hasAllianceInfo(std::string address) {
+    // if address is a member of default alliance
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        Entry tmpEntry = defaultAlliance[i];
+        if (address == tmpEntry.address) {
+            return true;
+        }
+    }
+
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    // DB value for property entry
+    std::string strAllianceValue;
+    leveldb::Status status = pdb->Get(readoptions, slAllianceKey, &strAllianceValue);
+
+    return status.ok();
+}
+
+void AllianceInfo::printAll() {
+    // print off the hard coded default alliances
+    for (unsigned int i = 0; i < defaultAlliance.size(); i++) {
+        defaultAlliance[i].print();
+    }
+
+    leveldb::Iterator* iter = NewIterator();
+
+    CDataStream ssAllianceKeyPrefix(SER_DISK, CLIENT_VERSION);
+    ssAllianceKeyPrefix << 'a';
+    leveldb::Slice slAllianceKeyPrefix(&ssAllianceKeyPrefix[0], ssAllianceKeyPrefix.size());
+
+    for (iter->Seek(slAllianceKeyPrefix); iter->Valid() && iter->key().starts_with(slAllianceKeyPrefix); iter->Next()) {
+        // deserialize the persisted data
+        leveldb::Slice slAllianceValue = iter->value();
+        Entry info;
+        try {
+            CDataStream ssAllianceValue(slAllianceValue.data(), slAllianceValue.data() + slAllianceValue.size(), SER_DISK, CLIENT_VERSION);
+            ssAllianceValue >> info;
+        } catch (const std::exception& e) {
+            PrintToConsole("<Malformed value in DB>\n");
+            PrintToLog("%s(): ERROR: %s\n", __func__, e.what());
+            continue;
+        }
+        info.print();
+    }
+
+    // clean up the iterator
+    delete iter;
+}
+
+void AllianceInfo::getAllAllianceInfo(std::vector<Entry>& infoVec) {
+    // prepare default alliances
+    infoVec.insert(infoVec.end(), defaultAlliance.begin(), defaultAlliance.end());
+
+    leveldb::Iterator* iter = NewIterator();
+
+    CDataStream ssAllianceKeyPrefix(SER_DISK, CLIENT_VERSION);
+    ssAllianceKeyPrefix << 'a';
+    leveldb::Slice slAllianceKeyPrefix(&ssAllianceKeyPrefix[0], ssAllianceKeyPrefix.size());
+
+    for (iter->Seek(slAllianceKeyPrefix); iter->Valid() && iter->key().starts_with(slAllianceKeyPrefix); iter->Next()) {
+        // deserialize the persisted data
+        leveldb::Slice slAllianceValue = iter->value();
+        Entry info;
+        try {
+            CDataStream ssAllianceValue(slAllianceValue.data(), slAllianceValue.data() + slAllianceValue.size(), SER_DISK, CLIENT_VERSION);
+            ssAllianceValue >> info;
+        } catch (const std::exception& e) {
+            PrintToConsole("<Malformed value in DB>\n");
+            PrintToLog("%s(): ERROR: %s\n", __func__, e.what());
+            continue;
+        }
+        
+        infoVec.push_back(info);
+    }
+
+    // clean up the iterator
+    delete iter;
+}
+
+uint32_t AllianceInfo::getApproveThreshold() {
+    // get all alliances info and the alliances number
+    std::vector<Entry> infoVec;
+    getAllAllianceInfo(infoVec);
+    uint32_t approveThreshold = 0;
+    for (unsigned int i=0; i<infoVec.size(); i++) {
+        if (infoVec[i].status == ALLIANCE_INFO_STATUS_APPROVED) {
+            if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+                int64_t balance = getMPbalance(infoVec[i].address, GCOIN_TOKEN, BALANCE);
+                approveThreshold += (uint32_t) balance;
+            } else {
+                approveThreshold += 1;
+            }
+        }
+    }
+    approveThreshold = uint32_t (round(approveThreshold * LICENSE_APPROVE_PERCENTAGE));
+
+    return approveThreshold;
+}
+
+bool AllianceInfo::deleteAllianceInfo(std::string address) {
+    // DB key for property entry
+    CDataStream ssAllianceKey(SER_DISK, CLIENT_VERSION);
+    ssAllianceKey << std::make_pair('a', address);
+    leveldb::Slice slAllianceKey(&ssAllianceKey[0], ssAllianceKey.size());
+
+    if(!hasAllianceInfo(address)) {
+        PrintToLog("Delete allianceInfo error. Try to delete non-exist alliance: %s\n", address);
+        return false;
+    }
+
+    leveldb::Status status = pdb->Delete(writeoptions, slAllianceKey);
+    return true;
+}
+
+bool AllianceInfo::isAllianceApproved(std::string address) {
+    Entry info;
+    if (!getAllianceInfo(address, info)) {
+        return false;
+    }
+    if (info.status != ALLIANCE_INFO_STATUS_APPROVED) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+/* Vote Record DB */
+/* key: 
+    address: alliance address.
+    txType: what alliance vote for.
+    voteTarget: vote target, can be either "property id" (vote for license) or "address" (vote for alliance).
+*/
+
+void VoteRecordDB::clear() {
+    // wipe database via parent class
+    CDBBase::Clear();
+    // reset "next property identifiers"
+}
+
+bool VoteRecordDB::updateVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    if (!pdb->Get(readoptions, slVoteRecordKey, &voteType).IsNotFound()) {
+        leveldb::Status status = pdb->Put(writeoptions, slVoteRecordKey, voteType);
+
+        if (!status.ok()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+            return false;
+        }
+    } else {
+        PrintToLog("Attemp to update non-exist alliance.\n");
+        PrintToConsole("Attemp to update non-exist alliance.\n");
+        return false;
+    }
+
+    return true;
+}
+
+bool VoteRecordDB::putVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string voteType) {
+    // key is address
+    // if already exist, change to update.
+    if (!pdb) {
+        return false;
+    }
+    if (hasVoteRecord(address, txType, voteTarget)) {
+        return updateVoteRecord(address, txType, voteTarget, voteType);
+    }
+
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    leveldb::Status status = pdb->Put(writeoptions, slVoteRecordKey, voteType);
+    PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
+    return status.ok();
+}
+
+bool VoteRecordDB::getVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    leveldb::Status status = pdb->Get(readoptions, slVoteRecordKey, &voteType);
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool VoteRecordDB::hasVoteRecord(std::string address, unsigned int txType, std::string voteTarget) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);    
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    // DB value for property entry
+    std::string tmp;
+    leveldb::Status status = pdb->Get(readoptions, slVoteRecordKey, &tmp);
+
+    return status.ok();
+}
+
+void VoteRecordDB::printAll() {
+    leveldb::Iterator* iter = NewIterator();
+
+    CDataStream ssVoteRecordKeyPrefix(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKeyPrefix << 'v';
+    leveldb::Slice slVoteRecordKeyPrefix(&ssVoteRecordKeyPrefix[0], ssVoteRecordKeyPrefix.size());
+
+    for (iter->Seek(slVoteRecordKeyPrefix); iter->Valid() && iter->key().starts_with(slVoteRecordKeyPrefix); iter->Next()) {
+        leveldb::Slice slVoteRecordKey = iter->key();
+
+        // deserialize the persisted data
+        leveldb::Slice slVoteRecordValue = iter->value();
+        PrintToConsole("key: %s, value: %s\n", slVoteRecordKey.ToString(), slVoteRecordValue.ToString());
+    }
+
+    // clean up the iterator
+    delete iter;
+}
+
+bool VoteRecordDB::deleteVoteRecord(std::string address, unsigned int txType, std::string voteTarget) {
+    // DB key for vote record entry
+    std::string key;
+    char txTypeStr[10];
+    snprintf(txTypeStr, sizeof(txTypeStr), "%u", txType);
+    key.append(txTypeStr);
+    key.append("-");
+    key.append(address);
+    key.append("-");
+    key.append(voteTarget);
+    CDataStream ssVoteRecordKey(SER_DISK, CLIENT_VERSION);
+    ssVoteRecordKey << std::make_pair('v', key);
+    leveldb::Slice slVoteRecordKey(&ssVoteRecordKey[0], ssVoteRecordKey.size());
+
+    if(!hasVoteRecord(address, txType, voteTarget)) {
+        PrintToLog("Delete vote record error. Try to delete non-exist vote record: addr: %s, txType: %d\n", address, txType);
+        return false;
+    }
+
+    leveldb::Status status = pdb->Delete(writeoptions, slVoteRecordKey);
+    return true;
+}
+
+/* End of vote record db*/
+
+/* BTC tx Record DB */
+/* key: 
+    address: receiver address.
+    pid: property id.
+
+    value: txid
+*/
+
+void BTCTxRecordDB::clear() {
+    // wipe database via parent class
+    CDBBase::Clear();
+    // reset "next property identifiers"
+}
+
+bool BTCTxRecordDB::getBTCTxRecord(std::string address, uint32_t pid, std::string& txid) {
+    // DB key for vote record entry
+    std::string key;
+    char pidStr[20];
+    snprintf(pidStr, sizeof(pidStr), "%u", pid);
+
+    key.append("btcTxRecord-");
+    key.append(address);
+    key.append("-");
+    key.append(pidStr);
+
+    PrintToConsole("key: %s\n", key);
+    // DB value for property entry
+    leveldb::Status status = pdb->Get(readoptions, key, &txid);
+    if (!status.ok()) {
+        if (!status.IsNotFound()) {
+            PrintToLog("%s(): ERROR for SP %s: %s\n", __func__, address, status.ToString());
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool BTCTxRecordDB::putBTCTxRecord(std::string address, uint32_t pid, std::string txid) {
+    // key is address
+    // if already exist, change to update.
+    if (!pdb) {
+        return false;
+    }
+    if (hasBTCTxRecord(address, pid)) {
+        return false;
+    }
+
+    // DB key for vote record entry
+    std::string key;
+    char pidStr[20];
+    snprintf(pidStr, sizeof(pidStr), "%u", pid);
+    key.append("btcTxRecord-");
+    key.append(address);
+    key.append("-");
+    key.append(pidStr);
+
+    leveldb::Status status = pdb->Put(writeoptions, key, txid);
+    PrintToLog("STODBDEBUG : %s(): %s, line %d, file: %s\n", __FUNCTION__, status.ToString(), __LINE__, __FILE__);
+    return status.ok();
+}
+
+bool BTCTxRecordDB::hasBTCTxRecord(std::string address, uint32_t pid) {
+    std::string tmp;
+    return getBTCTxRecord(address, pid, tmp);
+}
+
+bool BTCTxRecordDB::deleteBTCTxRecord(std::string address, uint32_t pid) {
+    // DB key for vote record entry
+    std::string key;
+    char pidStr[20];
+    snprintf(pidStr, sizeof(pidStr), "%u", pid);
+    key.append("btcTxRecord-");
+    key.append(address);
+    key.append("-");
+    key.append(pidStr);
+
+    if(!hasBTCTxRecord(address, pid)) {
+        PrintToLog("Delete vote record error. Try to delete non-exist btc tx record: addr: %s, pid: %u\n", address, pid);
+        return false;
+    }
+
+    leveldb::Status status = pdb->Delete(writeoptions, key);
+    return true;
+}
+
+/* End of btc tx record db*/
+
 
 bool mastercore::isPropertyDivisible(uint32_t propertyId)
 {

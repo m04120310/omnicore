@@ -1,11 +1,13 @@
 // This file serves to provide payload creation functions.
 
 #include "omnicore/createpayload.h"
-
 #include "omnicore/convert.h"
+#include "omnicore/sp.h"
+#include "omnicore/omnicore.h"
 
 #include "tinyformat.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -24,6 +26,130 @@
     vector.insert(vector.end(), reinterpret_cast<unsigned char *>((ptr)),\
     reinterpret_cast<unsigned char *>((ptr)) + (size));
 
+std::vector<unsigned char> CreatePayload_Test_C(std::string data)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 101;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_Test_B(std::string data)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 102;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_VoteForLicense(uint32_t propertyId, std::string voteType) {
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 500;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder32(propertyId);
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+    payload.insert(payload.end(), voteType.begin(), voteType.end());
+    payload.push_back('\0');
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_VoteForAlliance(std::string voteType) {
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 501;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    payload.insert(payload.end(), voteType.begin(), voteType.end());
+    payload.push_back('\0');
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t propertyId, std::string voteType, std::string data) {
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 502;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder32(propertyId);
+    if (data.size() > 1024) data = data.substr(0,1024);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+
+    payload.insert(payload.end(), voteType.begin(), voteType.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_RecordLicenseAndFund(uint32_t propertyId, uint32_t amount) {
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 503;
+    uint16_t messageVer = 0;
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder32(propertyId);
+    mastercore::swapByteOrder32(amount);
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, propertyId);
+    PUSH_BACK_BYTES(payload, amount);
+    
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name, std::string url, std::string data)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 400;
+    uint16_t messageVer = 0;
+
+    // get all alliances info and the alliances number
+    uint16_t approveThreshold = mastercore::allianceInfoDB->getApproveThreshold();
+    PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+    PrintToConsole("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(approveThreshold);
+    if (alliance_name.size() > 255) alliance_name = alliance_name.substr(0,255);
+    if (url.size() > 255) url = url.substr(0,255);
+    if (data.size() > 255) data = data.substr(0,255);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, approveThreshold);
+    payload.insert(payload.end(), alliance_name.begin(), alliance_name.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), url.begin(), url.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+
+    return payload;
+}
 
 std::vector<unsigned char> CreatePayload_SimpleSend(uint32_t propertyId, uint64_t amount)
 {
@@ -205,8 +331,15 @@ std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint
     std::vector<unsigned char> payload;
     uint16_t messageType = 54;
     uint16_t messageVer = 0;
+
+    // get all alliances info and the alliances number
+    uint16_t approveThreshold = mastercore::allianceInfoDB->getApproveThreshold();
+    PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+    PrintToConsole("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+
     mastercore::swapByteOrder16(messageVer);
     mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(approveThreshold);
     mastercore::swapByteOrder16(propertyType);
     mastercore::swapByteOrder32(previousPropertyId);
     if (category.size() > 255) category = category.substr(0,255);
@@ -220,6 +353,55 @@ std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint
     PUSH_BACK_BYTES(payload, ecosystem);
     PUSH_BACK_BYTES(payload, propertyType);
     PUSH_BACK_BYTES(payload, previousPropertyId);
+    PUSH_BACK_BYTES(payload, approveThreshold);
+    payload.insert(payload.end(), category.begin(), category.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), subcategory.begin(), subcategory.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), name.begin(), name.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), url.begin(), url.end());
+    payload.push_back('\0');
+    payload.insert(payload.end(), data.begin(), data.end());
+    payload.push_back('\0');
+
+    return payload;
+}
+
+std::vector<unsigned char> CreatePayload_ApplyLicenseAndFund(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
+                                                       std::string subcategory, std::string name, std::string url, std::string data, uint32_t moneyApplication)
+{
+    std::vector<unsigned char> payload;
+    uint16_t messageType = 401;
+    uint16_t messageVer = 0;
+
+    // get all alliances info and the alliances number
+    uint16_t approveThreshold = mastercore::allianceInfoDB->getApproveThreshold();
+    PrintToLog("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+    PrintToConsole("%s(): approveThreshold = %d\n", __func__, approveThreshold);
+
+    PrintToLog("%s(): moneyApplication = %d\n", __func__, moneyApplication);
+    PrintToConsole("%s(): moneyApplication = %d\n", __func__, moneyApplication);
+
+    mastercore::swapByteOrder16(messageVer);
+    mastercore::swapByteOrder16(messageType);
+    mastercore::swapByteOrder16(approveThreshold);
+    mastercore::swapByteOrder32(moneyApplication);
+    mastercore::swapByteOrder16(propertyType);
+    mastercore::swapByteOrder32(previousPropertyId);
+    if (category.size() > 255) category = category.substr(0,255);
+    if (subcategory.size() > 255) subcategory = subcategory.substr(0,255);
+    if (name.size() > 255) name = name.substr(0,255);
+    if (url.size() > 255) url = url.substr(0,255);
+    if (data.size() > 255) data = data.substr(0,255);
+
+    PUSH_BACK_BYTES(payload, messageVer);
+    PUSH_BACK_BYTES(payload, messageType);
+    PUSH_BACK_BYTES(payload, ecosystem);
+    PUSH_BACK_BYTES(payload, propertyType);
+    PUSH_BACK_BYTES(payload, previousPropertyId);
+    PUSH_BACK_BYTES(payload, approveThreshold);
+    PUSH_BACK_BYTES(payload, moneyApplication);
     payload.insert(payload.end(), category.begin(), category.end());
     payload.push_back('\0');
     payload.insert(payload.end(), subcategory.begin(), subcategory.end());
@@ -250,7 +432,7 @@ std::vector<unsigned char> CreatePayload_CloseCrowdsale(uint32_t propertyId)
     return payload;
 }
 
-std::vector<unsigned char> CreatePayload_Grant(uint32_t propertyId, uint64_t amount, std::string memo)
+std::vector<unsigned char> CreatePayload_MintLicense(uint32_t propertyId, uint64_t amount, std::string memo)
 {
     std::vector<unsigned char> payload;
     uint16_t messageType = 55;

@@ -69,6 +69,22 @@ private:
     unsigned char early_bird;
     unsigned char percentage;
 
+    // Gcoin Test usage
+    char test_data[SP_STRING_FIELD_LEN];
+
+    // Gcoin vote system usage
+    char voteType[10];
+    uint16_t approve_threshold;
+    char vote_data[1024];
+
+    // Gcoin License
+    uint32_t money_application;
+
+    // Gcoin Alliance
+    char alliance_name[SP_STRING_FIELD_LEN];
+    char alliance_url[SP_STRING_FIELD_LEN];
+    char alliance_data[SP_STRING_FIELD_LEN];
+
     // MetaDEx
     unsigned int desired_property;
     uint64_t desired_value;
@@ -99,6 +115,15 @@ private:
     /**
      * Payload parsing
      */
+    /* Gcoin usage */
+    bool interpret_Test();
+    bool interpret_VoteForLicense();
+    bool interpret_VoteForAlliance();
+    bool interpret_ApplyAlliance();
+    bool interpret_ApplyLicenseAndFund();
+    bool interpret_VoteForLicenseAndFund();
+    bool interpret_RecordLicenseAndFund();
+
     bool interpret_TransactionType();
     bool interpret_SimpleSend();
     bool interpret_SendToOwners();
@@ -122,6 +147,14 @@ private:
     /**
      * Logic and "effects"
      */
+    // Gcoin usage
+    int logicMath_VoteForLicense();
+    int logicMath_VoteForAlliance();
+    int logicMath_ApplyAlliance();
+    int logicMath_ApplyLicenseAndFund();
+    int logicMath_VoteForLicenseAndFund();
+    int logicMath_RecordLicenseAndFund();
+
     int logicMath_SimpleSend();
     int logicMath_SendToOwners();
     int logicMath_SendAll();

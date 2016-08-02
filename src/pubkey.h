@@ -12,8 +12,8 @@
 
 #include <stdexcept>
 #include <vector>
-
-/** 
+#include <stdio.h>
+/**
  * secp256k1:
  * const unsigned int PRIVATE_KEY_SIZE = 279;
  * const unsigned int PUBLIC_KEY_SIZE  = 65;
@@ -138,6 +138,13 @@ public:
         }
     }
 
+    void print() {
+        unsigned int len = size();
+        for(unsigned int i=0; i<len; i++) {
+            printf("%x", vch[i]);
+        }
+        printf("\n");
+    }
     //! Get the KeyID of this public key (hash of its serialization)
     CKeyID GetID() const
     {

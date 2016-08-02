@@ -15,6 +15,7 @@
 #include "utilmoneystr.h"
 #include "wallet.h"
 #include "walletdb.h"
+#include "script/script.h"
 
 #include <stdint.h>
 
@@ -771,6 +772,55 @@ Value movecmd(const Array& params, bool fHelp)
     return true;
 }
 
+// test multisig tx
+Value test_multisig_tx(const Array& params, bool fHelp) {
+    if (fHelp || params.size() < 2)
+        throw runtime_error("test multisig tx rpc error");
+    std::string strError;
+
+    // request the wallet build the transaction (and if needed commit it)
+    uint256 txid;
+    std::string rawHex;
+    std::vector<CPubKey> vKeys;
+    std::vector<std::pair<CScript, int64_t> > vecSend;
+    CWalletTx wtxNew;
+    CReserveKey reserveKey(pwalletMain);
+    CAmount nFeeRequired;
+    // change addr to pubkey
+    for(int i = 0; i < params.size(); i++) {
+        CBitcoinAddress address(params[i].get_str());
+        CKeyID keyID;
+        if (!address.GetKeyID(keyID))
+           throw runtime_error(
+                strprintf("%s does not refer to a key", params[i].get_str()));
+        CPubKey vchPubKey;
+        if (!pwalletMain->GetPubKey(keyID, vchPubKey))
+            throw runtime_error(
+                strprintf("no full public key for address %s", params[i].get_str()));
+        if (!vchPubKey.IsFullyValid())
+            throw runtime_error(" Invalid public key: " + params[i].get_str());
+        vKeys.push_back(vchPubKey);
+        if(i >= 1) {
+            CScript scriptMultisigOut = GetScriptForMultisig(1, vKeys);
+            printf("script: %s\n", scriptMultisigOut.ToString().c_str());
+            vecSend.push_back(std::make_pair(scriptMultisigOut, i * 10000));
+        }
+    }
+    CBitcoinAddress exodusAddress("n2jwMjstd8H5abyypRkrfALR9SpNNz1yDB");
+    CScript scriptExodusOutput = GetScriptForDestination(exodusAddress.Get());
+    printf("script: %s\n", scriptExodusOutput.ToString().c_str());
+    vecSend.push_back(std::make_pair(scriptExodusOutput, 10000));
+
+    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reserveKey, nFeeRequired, strError)) {
+        printf("test_multisig_tx error : %s\n", strError.c_str());
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+    if (!pwalletMain->CommitTransaction(wtxNew, reserveKey))
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
+
+    txid = wtxNew.GetHash();
+    return txid.GetHex();
+}
 
 Value sendfrom(const Array& params, bool fHelp)
 {

@@ -370,7 +370,7 @@ Value omni_createpayload_grant(const Array& params, bool fHelp)
     int64_t amount = ParseAmount(params[1], isPropertyDivisible(propertyId));
     std::string memo = (params.size() > 2) ? ParseText(params[2]): "";
 
-    std::vector<unsigned char> payload = CreatePayload_Grant(propertyId, amount, memo);
+    std::vector<unsigned char> payload = CreatePayload_MintLicense(propertyId, amount, memo);
 
     return HexStr(payload.begin(), payload.end());
 }

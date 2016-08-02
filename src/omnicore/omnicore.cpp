@@ -5,7 +5,6 @@
  */
 
 #include "omnicore/omnicore.h"
-
 #include "omnicore/activation.h"
 #include "omnicore/consensushash.h"
 #include "omnicore/convert.h"
@@ -102,8 +101,10 @@ CCriticalSection cs_tally;
 static string exodus_address = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
 
 static const string exodus_mainnet = "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P";
-static const string exodus_testnet = "mpexoDuSkGGqvqrkrjiFng38QPkJQVFyqv";
+static const string exodus_testnet = "mjZe4haCrjUcDHdGuX5kBn6sNhv65QTTRc";
 static const string getmoney_testnet = "moneyqMan7uh8FqdCA2BV5yZ8qVrc9ikLP";
+
+static const string multisig_treasury = "2N75etb378csmZYbEJtcLhcMNfwmeQ8JJV9";
 
 static int nWaterlineBlock = 0;
 
@@ -135,7 +136,9 @@ CMPTxList *mastercore::p_txlistdb;
 CMPTradeList *mastercore::t_tradelistdb;
 CMPSTOList *mastercore::s_stolistdb;
 COmniTransactionDB *mastercore::p_OmniTXDB;
-
+AllianceInfo *mastercore::allianceInfoDB;
+VoteRecordDB *mastercore::voteRecordDB;
+BTCTxRecordDB *mastercore::btcTxRecordDB;
 // indicate whether persistence is enabled at this point, or not
 // used to write/read files, for breakout mode, debugging, etc.
 static bool writePersistence(int block_now)
@@ -367,7 +370,7 @@ bool mastercore::update_tally_map(const std::string& who, uint32_t propertyId, i
         PrintToLog("%s(%s, %u=0x%X, %+d, ttype=%d) ERROR: invalid tally type\n", __func__, who, propertyId, propertyId, amount, ttype);
         return false;
     }
-    
+
     bool bRet = false;
     int64_t before = 0;
     int64_t after = 0;
@@ -587,7 +590,7 @@ int mastercore::GetEncodingClass(const CTransaction& tx, int nBlock)
                 continue;
             }
             if (!scriptPushes.empty()) {
-                std::vector<unsigned char> vchMarker = GetOmMarker();
+                std::vector<unsigned char> vchMarker = GetGcoinMarker();
                 std::vector<unsigned char> vchPushed = ParseHex(scriptPushes[0]);
                 if (vchPushed.size() < vchMarker.size()) {
                     continue;
@@ -680,8 +683,11 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
 
     // ### CLASS IDENTIFICATION AND MARKER CHECK ###
     int omniClass = GetEncodingClass(wtx, nBlock);
-
-    if (omniClass == NO_MARKER) {
+    if (omniClass == OMNI_CLASS_C) {
+        printf("class c transaction found!\n");
+    } else if (omniClass == OMNI_CLASS_B) {
+        printf("class b transaction found!\n");
+    } else if (omniClass == NO_MARKER) {
         return -1; // No Exodus/Omni marker, thus not a valid Omni transaction
     }
 
@@ -773,7 +779,9 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
     int64_t txFee = inAll - outAll; // miner fee
 
     if (!strSender.empty()) {
-        if (msc_debug_verbose) PrintToLog("The Sender: %s : fee= %s\n", strSender, FormatDivisibleMP(txFee));
+        if (msc_debug_verbose)
+            PrintToLog("The Sender: %s : fee= %s\n", strSender, FormatDivisibleMP(txFee));
+        printf("The Sender: %s : fee= %s\n", strSender.c_str(), FormatDivisibleMP(txFee).c_str());
     } else {
         PrintToLog("The sender is still EMPTY !!! txid: %s\n", wtx.GetHash().GetHex());
         return -5;
@@ -896,6 +904,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
     }
     // ### CLASS B / CLASS C PARSING ###
     if ((omniClass == OMNI_CLASS_B) || (omniClass == OMNI_CLASS_C)) {
+        printf("Beginning reference identification\n");
         if (msc_debug_parser_data) PrintToLog("Beginning reference identification\n");
         bool referenceFound = false; // bool to hold whether we've found the reference yet
         bool changeRemoved = false; // bool to hold whether we've ignored the first output to sender as change
@@ -926,13 +935,18 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
                         if (msc_debug_parser_data) PrintToLog("Removed change\n");
                     } else {
                         strReference = addr; // this may be set several times, but last time will be highest vout
+                        referenceFound = true;
                         if (msc_debug_parser_data) PrintToLog("Resetting strReference as follows: %s \n ", strReference);
                     }
                 }
             }
         }
-        if (msc_debug_parser_data) PrintToLog("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference);
+        // if still not found, mean the only output is to exodus. Just make exodus as receiver.
+        if (!referenceFound) 
+            strReference = exodus_address;
 
+        if (msc_debug_parser_data) PrintToLog("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference);
+        PrintToConsole("Ending reference identification\nFinal decision on reference identification is: %s\n", strReference);
         // ### CLASS B SPECIFC PARSING ###
         if (omniClass == OMNI_CLASS_B) {
             std::vector<std::string> multisig_script_data;
@@ -1042,7 +1056,7 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
                     }
                     // TODO: maybe encapsulate the following sort of messy code
                     if (!vstrPushes.empty()) {
-                        std::vector<unsigned char> vchMarker = GetOmMarker();
+                        std::vector<unsigned char> vchMarker = GetGcoinMarker();
                         std::vector<unsigned char> vchPushed = ParseHex(vstrPushes[0]);
                         if (vchPushed.size() < vchMarker.size()) {
                             continue;
@@ -1084,7 +1098,9 @@ static int parseTransaction(bool bRPConly, const CTransaction& wtx, int nBlock, 
     }
 
     // ### SET MP TX INFO ###
-    if (msc_debug_verbose) PrintToLog("single_pkt: %s\n", HexStr(single_pkt, packet_size + single_pkt));
+    if (msc_debug_verbose) {
+        PrintToLog("single_pkt: %s\n", HexStr(single_pkt, packet_size + single_pkt));
+    }
     mp_tx.Set(strSender, strReference, 0, wtx.GetHash(), nBlock, idx, (unsigned char *)&single_pkt, packet_size, omniClass, (inAll-outAll));
 
     // TODO: the following is a bit aweful
@@ -1257,8 +1273,13 @@ public:
  * @param nFirstBlock[in]  The index of the first block to scan
  * @return An exit code, indicating success or failure
  */
-static int msc_initial_scan(int nFirstBlock)
-{
+void initRewardToken() {
+    update_tally_map(exodus_address, OMNI_PROPERTY_MSC, 500, BALANCE);
+    update_tally_map("mm7JJBx74hBCR93hYiW7rY5oxEVTsXs4Yp", OMNI_PROPERTY_MSC, 240, BALANCE);
+    update_tally_map("muN6FNHipmchMamDhXEj9gdxz9HirA9XXF", OMNI_PROPERTY_MSC, 100, BALANCE);
+}
+
+static int msc_initial_scan(int nFirstBlock) {
     int nTimeBetweenProgressReports = GetArg("-omniprogressfrequency", 30);  // seconds
     int64_t nNow = GetTime();
     unsigned int nTxsTotal = 0;
@@ -1276,6 +1297,11 @@ static int msc_initial_scan(int nFirstBlock)
     // check if using seed block filter should be disabled
     bool seedBlockFilterEnabled = GetBoolArg("-omniseedblockfilter", true);
 
+    // init reward token if scan from genesis block
+    if (nFirstBlock == GCOIN_FEATURE_START_BLOCK_HEIGHT) {
+        initRewardToken();
+    }
+    
     for (nBlock = nFirstBlock; nBlock <= nLastBlock; ++nBlock)
     {
         if (ShutdownRequested()) {
@@ -1331,7 +1357,6 @@ int input_msc_balances_string(const std::string& s)
     if (addrData.size() != 2) return -1;
 
     std::string strAddress = addrData[0];
-
     // split the tuples of properties
     std::vector<std::string> vProperties;
     boost::split(vProperties, addrData[1], boost::is_any_of(";"), boost::token_compress_on);
@@ -1341,7 +1366,6 @@ int input_msc_balances_string(const std::string& s)
         if ((*iter).empty()) {
             continue;
         }
-
         // "propertyid:balancedata"
         std::vector<std::string> curProperty;
         boost::split(curProperty, *iter, boost::is_any_of(":"), boost::token_compress_on);
@@ -1586,6 +1610,7 @@ static int msc_file_load(const string &filename, int what, bool verifyHash = fal
 
   std::ifstream file;
   file.open(filename.c_str());
+  printf("filename: %s\n", filename.c_str());
   if (!file.is_open())
   {
     if (msc_debug_persistence) LogPrintf("%s(%s): file not found, line %d, file: %s\n", __FUNCTION__, filename, __LINE__, __FILE__);
@@ -1640,6 +1665,7 @@ static int msc_file_load(const string &filename, int what, bool verifyHash = fal
     }
   }
 
+  // printf("%s(%s), loaded lines= %d, res= %d\n", __FUNCTION__, filename.c_str(), lines, res);
   PrintToLog("%s(%s), loaded lines= %d, res= %d\n", __FUNCTION__, filename, lines, res);
   LogPrintf("%s(): file: %s , loaded lines= %d, res= %d\n", __FUNCTION__, filename, lines, res);
 
@@ -1656,111 +1682,110 @@ static char const * const statePrefix[NUM_FILETYPES] = {
 };
 
 // returns the height of the state loaded
-static int load_most_relevant_state()
-{
-  int res = -1;
-  // check the SP database and roll it back to its latest valid state
-  // according to the active chain
-  uint256 spWatermark;
-  if (!_my_sps->getWatermark(spWatermark)) {
-    //trigger a full reparse, if the SP database has no watermark
-    return -1;
-  }
-
-  CBlockIndex const *spBlockIndex = GetBlockIndex(spWatermark);
-  if (NULL == spBlockIndex) {
-    //trigger a full reparse, if the watermark isn't a real block
-    return -1;
-  }
-
-  while (NULL != spBlockIndex && false == chainActive.Contains(spBlockIndex)) {
-    int remainingSPs = _my_sps->popBlock(spBlockIndex->GetBlockHash());
-    if (remainingSPs < 0) {
-      // trigger a full reparse, if the levelDB cannot roll back
-      return -1;
-    } /*else if (remainingSPs == 0) {
-      // potential optimization here?
-    }*/
-    spBlockIndex = spBlockIndex->pprev;
-    if (spBlockIndex != NULL) {
-        _my_sps->setWatermark(spBlockIndex->GetBlockHash());
-    }
-  }
-
-  // prepare a set of available files by block hash pruning any that are
-  // not in the active chain
-  std::set<uint256> persistedBlocks;
-  boost::filesystem::directory_iterator dIter(MPPersistencePath);
-  boost::filesystem::directory_iterator endIter;
-  for (; dIter != endIter; ++dIter) {
-    if (false == boost::filesystem::is_regular_file(dIter->status()) || dIter->path().empty()) {
-      // skip funny business
-      continue;
+static int load_most_relevant_state() {
+    int res = -1;
+    // check the SP database and roll it back to its latest valid state
+    // according to the active chain
+    uint256 spWatermark;
+    if (!_my_sps->getWatermark(spWatermark)) {
+        //trigger a full reparse, if the SP database has no watermark
+        return -1;
     }
 
-    std::string fName = (*--dIter->path().end()).string();
-    std::vector<std::string> vstr;
-    boost::split(vstr, fName, boost::is_any_of("-."), token_compress_on);
-    if (  vstr.size() == 3 &&
-          boost::equals(vstr[2], "dat")) {
-      uint256 blockHash;
-      blockHash.SetHex(vstr[1]);
-      CBlockIndex *pBlockIndex = GetBlockIndex(blockHash);
-      if (pBlockIndex == NULL || false == chainActive.Contains(pBlockIndex)) {
-        continue;
-      }
-
-      // this is a valid block in the active chain, store it
-      persistedBlocks.insert(blockHash);
+    CBlockIndex const *spBlockIndex = GetBlockIndex(spWatermark);
+    if (NULL == spBlockIndex) {
+        //trigger a full reparse, if the watermark isn't a real block
+        return -1;
     }
-  }
 
-  // using the SP's watermark after its fixed-up as the tip
-  // walk backwards until we find a valid and full set of persisted state files
-  // for each block we discard, roll back the SP database
-  // Note: to avoid rolling back all the way to the genesis block (which appears as if client is hung) abort after MAX_STATE_HISTORY attempts
-  CBlockIndex const *curTip = spBlockIndex;
-  int abortRollBackBlock;
-  if (curTip != NULL) abortRollBackBlock = curTip->nHeight - (MAX_STATE_HISTORY+1);
-  while (NULL != curTip && persistedBlocks.size() > 0 && curTip->nHeight > abortRollBackBlock) {
-    if (persistedBlocks.find(spBlockIndex->GetBlockHash()) != persistedBlocks.end()) {
-      int success = -1;
-      for (int i = 0; i < NUM_FILETYPES; ++i) {
-        boost::filesystem::path path = MPPersistencePath / strprintf("%s-%s.dat", statePrefix[i], curTip->GetBlockHash().ToString());
-        const std::string strFile = path.string();
-        success = msc_file_load(strFile, i, true);
-        if (success < 0) {
-          break;
+    while (NULL != spBlockIndex && false == chainActive.Contains(spBlockIndex)) {
+        int remainingSPs = _my_sps->popBlock(spBlockIndex->GetBlockHash());
+        if (remainingSPs < 0) {
+          // trigger a full reparse, if the levelDB cannot roll back
+          return -1;
+        } /*else if (remainingSPs == 0) {
+          // potential optimization here?
+        }*/
+        spBlockIndex = spBlockIndex->pprev;
+        if (spBlockIndex != NULL) {
+            _my_sps->setWatermark(spBlockIndex->GetBlockHash());
         }
-      }
-
-      if (success >= 0) {
-        res = curTip->nHeight;
-        break;
-      }
-
-      // remove this from the persistedBlock Set
-      persistedBlocks.erase(spBlockIndex->GetBlockHash());
     }
 
-    // go to the previous block
-    if (0 > _my_sps->popBlock(curTip->GetBlockHash())) {
-      // trigger a full reparse, if the levelDB cannot roll back
-      return -1;
-    }
-    curTip = curTip->pprev;
-    if (curTip != NULL) {
-        _my_sps->setWatermark(curTip->GetBlockHash());
-    }
-  }
+    // prepare a set of available files by block hash pruning any that are
+    // not in the active chain
+    std::set<uint256> persistedBlocks;
+    boost::filesystem::directory_iterator dIter(MPPersistencePath);
+    boost::filesystem::directory_iterator endIter;
+    for (; dIter != endIter; ++dIter) {
+        if (false == boost::filesystem::is_regular_file(dIter->status()) || dIter->path().empty()) {
+          // skip funny business
+          continue;
+        }
 
-  if (persistedBlocks.size() == 0) {
-    // trigger a reparse if we exhausted the persistence files without success
-    return -1;
-  }
+        std::string fName = (*--dIter->path().end()).string();
+        std::vector<std::string> vstr;
+        boost::split(vstr, fName, boost::is_any_of("-."), token_compress_on);
+        if (  vstr.size() == 3 &&
+              boost::equals(vstr[2], "dat")) {
+          uint256 blockHash;
+          blockHash.SetHex(vstr[1]);
+          CBlockIndex *pBlockIndex = GetBlockIndex(blockHash);
+          if (pBlockIndex == NULL || false == chainActive.Contains(pBlockIndex)) {
+            continue;
+          }
 
-  // return the height of the block we settled at
-  return res;
+          // this is a valid block in the active chain, store it
+          persistedBlocks.insert(blockHash);
+        }
+    }
+
+    // using the SP's watermark after its fixed-up as the tip
+    // walk backwards until we find a valid and full set of persisted state files
+    // for each block we discard, roll back the SP database
+    // Note: to avoid rolling back all the way to the genesis block (which appears as if client is hung) abort after MAX_STATE_HISTORY attempts
+    CBlockIndex const *curTip = spBlockIndex;
+    int abortRollBackBlock;
+    if (curTip != NULL) 
+        abortRollBackBlock = curTip->nHeight - (MAX_STATE_HISTORY+1);
+    while (NULL != curTip && persistedBlocks.size() > 0 && curTip->nHeight > abortRollBackBlock) {
+        if (persistedBlocks.find(spBlockIndex->GetBlockHash()) != persistedBlocks.end()) {
+          int success = -1;
+          for (int i = 0; i < NUM_FILETYPES; ++i) {
+            boost::filesystem::path path = MPPersistencePath / strprintf("%s-%s.dat", statePrefix[i], curTip->GetBlockHash().ToString());
+            const std::string strFile = path.string();
+            success = msc_file_load(strFile, i, true);
+            if (success < 0) {
+              break;
+            }
+          }
+
+          if (success >= 0) {
+            res = curTip->nHeight;
+            break;
+          }
+
+          // remove this from the persistedBlock Set
+          persistedBlocks.erase(spBlockIndex->GetBlockHash());
+        }
+
+        // go to the previous block
+        if (0 > _my_sps->popBlock(curTip->GetBlockHash())) {
+          // trigger a full reparse, if the levelDB cannot roll back
+          return -1;
+        }
+        curTip = curTip->pprev;
+        if (curTip != NULL) {
+            _my_sps->setWatermark(curTip->GetBlockHash());
+        }
+    }
+
+    if (persistedBlocks.size() == 0) {
+        // trigger a reparse if we exhausted the persistence files without success
+        return -1;
+    }
+
+    return res;
 }
 
 static int write_msc_balances(std::ofstream& file, SHA256_CTX* shaCtx)
@@ -1889,7 +1914,6 @@ static int write_state_file( CBlockIndex const *pBlockIndex, int what )
 {
   boost::filesystem::path path = MPPersistencePath / strprintf("%s-%s.dat", statePrefix[what], pBlockIndex->GetBlockHash().ToString());
   const std::string strFile = path.string();
-
   std::ofstream file;
   file.open(strFile.c_str());
 
@@ -2053,8 +2077,7 @@ void clear_all_state()
  *
  * @return An exit code, indicating success or failure
  */
-int mastercore_init()
-{
+int mastercore_init() {
     LOCK(cs_tally);
 
     if (mastercoreInitialized) {
@@ -2093,12 +2116,18 @@ int mastercore_init()
             boost::filesystem::path spPath = GetDataDir() / "MP_spinfo";
             boost::filesystem::path stoPath = GetDataDir() / "MP_stolist";
             boost::filesystem::path omniTXDBPath = GetDataDir() / "Omni_TXDB";
-            if (boost::filesystem::exists(persistPath)) boost::filesystem::remove_all(persistPath);
-            if (boost::filesystem::exists(txlistPath)) boost::filesystem::remove_all(txlistPath);
-            if (boost::filesystem::exists(tradePath)) boost::filesystem::remove_all(tradePath);
-            if (boost::filesystem::exists(spPath)) boost::filesystem::remove_all(spPath);
-            if (boost::filesystem::exists(stoPath)) boost::filesystem::remove_all(stoPath);
-            if (boost::filesystem::exists(omniTXDBPath)) boost::filesystem::remove_all(omniTXDBPath);
+            if (boost::filesystem::exists(persistPath))
+                boost::filesystem::remove_all(persistPath);
+            if (boost::filesystem::exists(txlistPath))
+                boost::filesystem::remove_all(txlistPath);
+            if (boost::filesystem::exists(tradePath))
+                boost::filesystem::remove_all(tradePath);
+            if (boost::filesystem::exists(spPath))
+                boost::filesystem::remove_all(spPath);
+            if (boost::filesystem::exists(stoPath))
+                boost::filesystem::remove_all(stoPath);
+            if (boost::filesystem::exists(omniTXDBPath))
+                boost::filesystem::remove_all(omniTXDBPath);
             PrintToLog("Success clearing persistence files in datadir %s\n", GetDataDir().string());
             startClean = true;
         } catch (const boost::filesystem::filesystem_error& e) {
@@ -2113,16 +2142,28 @@ int mastercore_init()
     _my_sps = new CMPSPInfo(GetDataDir() / "MP_spinfo", fReindex);
     p_OmniTXDB = new COmniTransactionDB(GetDataDir() / "Omni_TXDB", fReindex);
 
+    // Alliance info
+    PrintToConsole("init alliance info db\n");
+    allianceInfoDB = new AllianceInfo(GetDataDir() / "AllianceInfoDB", fReindex);
+    allianceInfoDB->printAll();
+
+    // Vote record db
+    PrintToConsole("init vote info db\n");
+    voteRecordDB = new VoteRecordDB(GetDataDir() / "VoteRecordDB", fReindex);
+
+    // BTC tx record db
+    PrintToConsole("init BTC tx info db\n");
+    btcTxRecordDB = new BTCTxRecordDB(GetDataDir() / "BTCTxRecordDB", fReindex);
+
+
     MPPersistencePath = GetDataDir() / "MP_persist";
     TryCreateDirectory(MPPersistencePath);
 
     bool wrongDBVersion = (p_txlistdb->getDBVersion() != DB_VERSION);
 
     ++mastercoreInitialized;
-
     nWaterlineBlock = load_most_relevant_state();
     bool noPreviousState = (nWaterlineBlock <= 0);
-
     if (startClean) {
         assert(p_txlistdb->setDBVersion() == DB_VERSION); // new set of databases, set DB version
     } else if (wrongDBVersion) {
@@ -2172,10 +2213,11 @@ int mastercore_init()
     msc_initial_scan(nWaterlineBlock);
 
     // display Exodus balance
+    printf("exodus_balance: %s\n", exodus_address.c_str());
     int64_t exodus_balance = getMPbalance(exodus_address, OMNI_PROPERTY_MSC, BALANCE);
-    PrintToLog("Exodus balance after initialization: %s\n", FormatDivisibleMP(exodus_balance));
+    PrintToLog("Exodus balance after initialization: %s\n", FormatMP(OMNI_PROPERTY_MSC, exodus_balance));
 
-    PrintToConsole("Exodus balance: %s OMNI\n", FormatDivisibleMP(exodus_balance));
+    PrintToConsole("Exodus balance: %s OMNI\n", FormatMP(OMNI_PROPERTY_MSC, exodus_balance));
     PrintToConsole("Omni Core initialization completed\n");
 
     return 0;
@@ -2295,7 +2337,7 @@ bool mastercore_handler_tx(const CTransaction& tx, int nBlock, unsigned int idx,
  */
 bool mastercore::UseEncodingClassC(size_t nDataSize)
 {
-    size_t nTotalSize = nDataSize + GetOmMarker().size(); // Marker "omni"
+    size_t nTotalSize = nDataSize + GetGcoinMarker().size(); // Marker "omni"
     bool fDataEnabled = GetBoolArg("-datacarrier", true);
     int nBlockNow = GetHeight();
     if (!IsAllowedOutputType(TX_NULL_DATA, nBlockNow)) {
@@ -2309,12 +2351,17 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
                           int64_t referenceAmount, const std::vector<unsigned char>& data, uint256& txid, std::string& rawHex, bool commit)
 {
 #ifdef ENABLE_WALLET
-    if (pwalletMain == NULL) return MP_ERR_WALLET_ACCESS;
+    if (pwalletMain == NULL) {
+        return MP_ERR_WALLET_ACCESS;
+    }
 
     // Determine the class to send the transaction via - default is Class C
     int omniTxClass = OMNI_CLASS_C;
     if (!UseEncodingClassC(data.size())) omniTxClass = OMNI_CLASS_B;
-
+    if(omniTxClass==OMNI_CLASS_B)
+        printf("tx class: B\n");
+    else
+        printf("tx class: C\n");
     // Prepare the transaction - first setup some vars
     CCoinControl coinControl;
     txid = 0;
@@ -2332,18 +2379,20 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     if (0 > SelectCoins(senderAddress, coinControl, referenceAmount)) { return MP_INPUTS_INVALID; }
 
     // Encode the data outputs
-    switch(omniTxClass) {
-        case OMNI_CLASS_B: { // declaring vars in a switch here so use an expicit code block
-            CPubKey redeemingPubKey;
-            const std::string& sAddress = redemptionAddress.empty() ? senderAddress : redemptionAddress;
-            if (!AddressToPubKey(sAddress, redeemingPubKey)) {
-                return MP_REDEMP_BAD_VALIDATION;
-            }
-            if (!OmniCore_Encode_ClassB(senderAddress,redeemingPubKey,data,vecSend)) { return MP_ENCODING_ERROR; }
-        break; }
-        case OMNI_CLASS_C:
-            if(!OmniCore_Encode_ClassC(data,vecSend)) { return MP_ENCODING_ERROR; }
-        break;
+    if (data.size() != 0) {
+        switch(omniTxClass) {
+            case OMNI_CLASS_B: { // declaring vars in a switch here so use an expicit code block
+                CPubKey redeemingPubKey;
+                const std::string& sAddress = redemptionAddress.empty() ? senderAddress : redemptionAddress;
+                if (!AddressToPubKey(sAddress, redeemingPubKey)) {
+                    return MP_REDEMP_BAD_VALIDATION;
+                }
+                if (!OmniCore_Encode_ClassB(senderAddress,redeemingPubKey,data,vecSend)) { return MP_ENCODING_ERROR; }
+            break; }
+            case OMNI_CLASS_C:
+                if(!OmniCore_Encode_ClassC(data,vecSend)) { return MP_ENCODING_ERROR; }
+            break;
+        }
     }
 
     // Then add a paytopubkeyhash output for the recipient (if needed) - note we do this last as we want this to be the highest vout
@@ -2357,7 +2406,9 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     if (!coinControl.HasSelected()) return MP_ERR_INPUTSELECT_FAIL;
 
     // Ask the wallet to create the transaction (note mining fee determined by Bitcoin Core params)
-    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reserveKey, nFeeRet, strFailReason, &coinControl)) { return MP_ERR_CREATE_TX; }
+    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reserveKey, nFeeRet, strFailReason, &coinControl)) { 
+        PrintToConsole("Create tx failed. Reason: %s\n", strFailReason);
+        return MP_ERR_CREATE_TX; }
 
     // If this request is only to create, but not commit the transaction then display it and exit
     if (!commit) {
@@ -2366,7 +2417,11 @@ int mastercore::ClassAgnosticWalletTXBuilder(const std::string& senderAddress, c
     } else {
         // Commit the transaction to the wallet and broadcast)
         PrintToLog("%s():%s; nFeeRet = %lu, line %d, file: %s\n", __FUNCTION__, wtxNew.ToString(), nFeeRet, __LINE__, __FILE__);
-        if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) return MP_ERR_COMMIT_TX;
+        if (!pwalletMain->CommitTransaction(wtxNew, reserveKey)) {
+            PrintToLog("commit tx failed\n");
+            return MP_ERR_COMMIT_TX;
+        }
+        PrintToLog("commit successfully\n");
         txid = wtxNew.GetHash();
         return 0;
     }
@@ -2441,8 +2496,11 @@ void CMPTxList::LoadActivations(int blockHeight)
         std::string itData = it->value().ToString();
         std::vector<std::string> vstr;
         boost::split(vstr, itData, boost::is_any_of(":"), token_compress_on);
-        if (4 != vstr.size()) continue; // unexpected number of tokens
-        if (atoi(vstr[2]) != OMNICORE_MESSAGE_TYPE_ACTIVATION || atoi(vstr[0]) != 1) continue; // we only care about valid activations
+        if (4 != vstr.size())
+            continue; // unexpected number of tokens
+        if (atoi(vstr[2]) != OMNICORE_MESSAGE_TYPE_ACTIVATION || atoi(vstr[0]) != 1) {
+            continue; // we only care about valid activations
+        }
         uint256 txid(it->key().ToString());;
         loadOrder.push_back(std::make_pair(atoi(vstr[1]), txid));
     }
@@ -3196,11 +3254,9 @@ void CMPSTOList::printStats()
 }
 
 /**
- * This function deletes records of STO receivers above a specific block from the STO database.
+ * This function deletes records of STO receivers above/equal to a specific block from the STO database.
  *
  * Returns the number of records changed.
- *
- * NOTE: The blockNum parameter is inclusive, so deleteAboveBlock(1000) will delete records in block 1000 and above.
  */
 int CMPSTOList::deleteAboveBlock(int blockNum)
 {
@@ -3216,7 +3272,7 @@ int CMPSTOList::deleteAboveBlock(int blockNum)
           std::vector<std::string> vecSTORecordFields;
           boost::split(vecSTORecordFields, vecSTORecords[i], boost::is_any_of(":"), boost::token_compress_on);
           if (4 != vecSTORecordFields.size()) continue;
-          if (atoi(vecSTORecordFields[1]) <= blockNum) {
+          if (atoi(vecSTORecordFields[1]) < blockNum) {
               newValue += vecSTORecords[i].append(","); // STO before the reorg, add data back to new value string
           } else {
               needsUpdate = true;
@@ -3455,7 +3511,11 @@ void CMPTradeList::recordMatchedTrade(const uint256 txid1, const uint256 txid2, 
   }
 }
 
-// delete any trades after blockNum
+/**
+ * This function deletes records of trades above/equal to a specific block from the trade database.
+ *
+ * Returns the number of records changed.
+ */
 int CMPTradeList::deleteAboveBlock(int blockNum)
 {
   leveldb::Slice skey, svalue;
@@ -3590,9 +3650,10 @@ int mastercore_handler_block_begin(int nBlockPrev, CBlockIndex const * pBlockInd
     if (reorgRecoveryMode > 0) {
         reorgRecoveryMode = 0; // clear reorgRecovery here as this is likely re-entrant
 
-        p_txlistdb->isMPinBlockRange(pBlockIndex->nHeight, reorgRecoveryMaxHeight, true); // inclusive
-        t_tradelistdb->deleteAboveBlock(pBlockIndex->nHeight - 1); // deleteAboveBlock functions are non-inclusive (>blocknum not >=blocknum)
-        s_stolistdb->deleteAboveBlock(pBlockIndex->nHeight - 1);
+        // NOTE: The blockNum parameter is inclusive, so deleteAboveBlock(1000) will delete records in block 1000 and above.
+        p_txlistdb->isMPinBlockRange(pBlockIndex->nHeight, reorgRecoveryMaxHeight, true);
+        t_tradelistdb->deleteAboveBlock(pBlockIndex->nHeight);
+        s_stolistdb->deleteAboveBlock(pBlockIndex->nHeight);
         reorgRecoveryMaxHeight = 0;
 
         nWaterlineBlock = ConsensusParams().GENESIS_BLOCK - 1;
@@ -3630,6 +3691,7 @@ int mastercore_handler_block_begin(int nBlockPrev, CBlockIndex const * pBlockInd
 int mastercore_handler_block_end(int nBlockNow, CBlockIndex const * pBlockIndex,
         unsigned int countMP)
 {
+    printf("Update new block. Block height: %d\n", nBlockNow);
     LOCK(cs_tally);
 
     if (!mastercoreInitialized) {
@@ -3650,11 +3712,11 @@ int mastercore_handler_block_end(int nBlockNow, CBlockIndex const * pBlockIndex,
     }
 
     // calculate devmsc as of this block and update the Exodus' balance
-    devmsc = calculate_and_update_devmsc(pBlockIndex->GetBlockTime());
+    // devmsc = calculate_and_update_devmsc(pBlockIndex->GetBlockTime());
 
     if (msc_debug_exo) {
         int64_t balance = getMPbalance(exodus_address, OMNI_PROPERTY_MSC, BALANCE);
-        PrintToLog("devmsc for block %d: %d, Exodus balance: %d\n", nBlockNow, devmsc, FormatDivisibleMP(balance));
+        PrintToLog("devmsc for block %d: %d, Exodus balance: %d\n", nBlockNow, devmsc, FormatMP(OMNI_PROPERTY_MSC, balance));
     }
 
     // check the alert status, do we need to do anything else here?
@@ -3753,9 +3815,8 @@ const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock)
 /**
  * @return The marker for class C transactions.
  */
-const std::vector<unsigned char> GetOmMarker()
+const std::vector<unsigned char> GetGcoinMarker()
 {
-    static unsigned char pch[] = {0x6f, 0x6d, 0x6e, 0x69}; // Hex-encoded: "omni"
-
+    static unsigned char pch[] = {0x67, 0x63, 0x6f, 0x69, 0x6e}; // Hex-encoded: "gcoin"
     return std::vector<unsigned char>(pch, pch + sizeof(pch) / sizeof(pch[0]));
 }

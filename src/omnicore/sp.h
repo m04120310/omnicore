@@ -92,6 +92,13 @@ public:
         //   txid -> granted amount, revoked amount
         std::map<uint256, std::vector<int64_t> > historicalData;
 
+        // For License properties
+        uint16_t approve_threshold;
+        uint16_t approve_count;
+        uint16_t reject_count;
+        uint32_t money_application;
+        std::string money_application_txid;
+
         Entry();
 
         ADD_SERIALIZE_METHODS;
@@ -122,6 +129,11 @@ public:
             READWRITE(fixed);
             READWRITE(manual);
             READWRITE(historicalData);
+            READWRITE(approve_threshold);
+            READWRITE(approve_count);
+            READWRITE(reject_count);
+            READWRITE(money_application);
+            READWRITE(money_application_txid);
         }
 
         bool isDivisible() const;
@@ -130,6 +142,7 @@ public:
 
 private:
     // implied version of OMNI and TOMNI so they don't hit the leveldb
+    Entry implied_gcoin_token;
     Entry implied_omni;
     Entry implied_tomni;
 
@@ -205,12 +218,136 @@ public:
     void saveCrowdSale(std::ofstream& file, SHA256_CTX* shaCtx, const std::string& addr) const;
 };
 
+// Alliance DB
+class AllianceInfo : public CDBBase {
+public:
+    static const unsigned int ALLIANCE_INFO_STATUS_APPROVED = 0;
+    static const unsigned int ALLIANCE_INFO_STATUS_PENDING = 1;
+    static const unsigned int ALLIANCE_INFO_STATUS_REJECTED = 2;
+    struct Entry {
+        std::string address;
+        std::string name;
+        std::string url;
+        std::string data;
+
+        // other information
+        uint256 txid;
+        uint256 creation_block;
+        uint256 update_block;
+
+        // For Alliance vote result
+        uint32_t approve_threshold;
+        uint32_t approve_count;
+        uint32_t reject_count;
+
+        // status
+        unsigned int status;
+
+        // Serialization
+        ADD_SERIALIZE_METHODS;
+
+        template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+            READWRITE(address);
+            READWRITE(name);
+            READWRITE(url);
+            READWRITE(data);
+            READWRITE(txid);
+            READWRITE(creation_block);
+            READWRITE(update_block);
+            READWRITE(status);
+            READWRITE(approve_threshold);
+            READWRITE(approve_count);
+            READWRITE(reject_count);
+        }
+
+        void print();
+        std::string getStatusString();
+    };
+
+private:
+    /* Default to be exodus address. */
+    std::vector<Entry> defaultAlliance;
+
+public:
+    AllianceInfo(const boost::filesystem::path& path, bool fWipe) {
+        leveldb::Status status = Open(path, fWipe);
+        PrintToConsole("Loading alliance info database: %s\n", status.ToString());
+        init();
+    }
+
+    virtual ~AllianceInfo() {
+        if (msc_debug_persistence)
+            PrintToLog("Alliance info is closed\n");
+    }
+
+    void init();
+    void clear();
+    static Entry allianceInfoEntryBuilder(std::string address, std::string name, std::string url, uint16_t approve_threshold,
+                                 std::string data, uint256 txid, uint256 blockId);
+    bool updateAllianceInfo(std::string address, Entry& info);
+    bool putAllianceInfo(std::string address, Entry& info);
+    bool getAllianceInfo(std::string address, Entry& info);
+    bool hasAllianceInfo(std::string address);
+    void getAllAllianceInfo(std::vector<Entry>& infoVec);
+    bool deleteAllianceInfo(std::string address);
+    bool isAllianceApproved(std::string address);
+    uint32_t getApproveThreshold();
+
+    void printAll();
+};
+
+
+// Vote record DB
+class VoteRecordDB : public CDBBase {
+public:
+    VoteRecordDB(const boost::filesystem::path& path, bool fWipe) {
+        leveldb::Status status = Open(path, fWipe);
+        PrintToConsole("Loading vote record database: %s\n", status.ToString());
+    }
+
+    virtual ~VoteRecordDB() {
+        if (msc_debug_persistence)
+            PrintToLog("VoteRecordDB is closed\n");
+    }
+    void clear();
+    bool updateVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType);
+    bool putVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string voteType);
+    bool getVoteRecord(std::string address, unsigned int txType, std::string voteTarget, std::string& voteType);
+    bool hasVoteRecord(std::string address, unsigned int txType, std::string voteTarget);
+    bool deleteVoteRecord(std::string address, unsigned int txType, std::string voteTarget);
+
+    void printAll();
+};
+
+// BTC tx record DB
+class BTCTxRecordDB : public CDBBase {
+public:
+    BTCTxRecordDB(const boost::filesystem::path& path, bool fWipe) {
+        leveldb::Status status = Open(path, fWipe);
+        PrintToConsole("Loading btc tx record database: %s\n", status.ToString());
+    }
+
+    virtual ~BTCTxRecordDB() {
+        if (msc_debug_persistence)
+            PrintToLog("BTCTxRecordDB is closed\n");
+    }
+    void clear();
+    bool getBTCTxRecord(std::string address, uint32_t pid, std::string& txid);
+    bool putBTCTxRecord(std::string address, uint32_t pid, std::string txid);
+    bool hasBTCTxRecord(std::string address, uint32_t pid);
+    bool deleteBTCTxRecord(std::string address, uint32_t pid);
+};
+
 namespace mastercore
 {
 typedef std::map<std::string, CMPCrowd> CrowdMap;
 
 extern CMPSPInfo* _my_sps;
 extern CrowdMap my_crowds;
+extern AllianceInfo* allianceInfoDB;
+extern VoteRecordDB* voteRecordDB;
+extern BTCTxRecordDB* btcTxRecordDB;
 
 std::string strPropertyType(uint16_t propertyType);
 std::string strEcosystem(uint8_t ecosystem);

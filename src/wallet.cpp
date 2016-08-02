@@ -1373,8 +1373,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
         }
         nValue += s.second;
     }
-    if (vecSend.empty() || nValue < 0)
-    {
+    if (vecSend.empty() || nValue < 0) {
         strFailReason = _("Transaction amounts must be positive");
         return false;
     }
@@ -1462,6 +1461,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
 
                     CTxOut newTxOut(nChange, scriptChange);
 
+                    printf("nFeeRet: %d\n", nFeeRet);
                     // Never create dust outputs; if we would, just
                     // add the dust to the fee.
                     if (newTxOut.IsDust(::minRelayTxFee))

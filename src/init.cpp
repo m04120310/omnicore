@@ -1146,10 +1146,6 @@ bool AppInit2(boost::thread_group& threadGroup)
         }
     }
 
-    uiInterface.InitMessage(_("Parsing Omni Layer transactions..."));
-
-    mastercore_init();
-
     // ********************************************************* Step 8: load wallet
 #ifdef ENABLE_WALLET
     if (fDisableWallet) {
@@ -1288,6 +1284,17 @@ bool AppInit2(boost::thread_group& threadGroup)
     CheckWalletUpdate();
 
     } // (!fDisableWallet)
+    if (pwalletMain != NULL)
+        printf("pwalletMain is not null\n");
+    else
+        printf("pwalletMain is null\n");
+
+
+    uiInterface.InitMessage(_("Parsing Omni Layer transactions..."));
+
+    mastercore_init();
+    
+
 #else // ENABLE_WALLET
     LogPrintf("No wallet compiled in!\n");
 #endif // !ENABLE_WALLET

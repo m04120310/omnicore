@@ -5,6 +5,17 @@
 #include <vector>
 #include <stdint.h>
 
+/* Gcoin usage */
+std::vector<unsigned char> CreatePayload_Test_C(std::string data);
+std::vector<unsigned char> CreatePayload_Test_B(std::string data);
+std::vector<unsigned char> CreatePayload_VoteForLicense(uint32_t propertyId, std::string voteType);
+std::vector<unsigned char> CreatePayload_VoteForLicenseAndFund(uint32_t propertyId, std::string voteType, std::string data);
+std::vector<unsigned char> CreatePayload_RecordLicenseAndFund(uint32_t propertyId, uint32_t amount);
+std::vector<unsigned char> CreatePayload_VoteForAlliance(std::string voteType);
+std::vector<unsigned char> CreatePayload_ApplyAlliance(std::string alliance_name, std::string url, std::string data);
+std::vector<unsigned char> CreatePayload_ApplyLicenseAndFund(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
+                                                       std::string subcategory, std::string name, std::string url, std::string data, uint32_t moneyApplication);
+
 std::vector<unsigned char> CreatePayload_SimpleSend(uint32_t propertyId, uint64_t amount);
 std::vector<unsigned char> CreatePayload_SendAll(uint8_t ecosystem);
 std::vector<unsigned char> CreatePayload_DExSell(uint32_t propertyId, uint64_t amountForSale, uint64_t amountDesired, uint8_t timeLimit, uint64_t minFee, uint8_t subAction);
@@ -18,7 +29,7 @@ std::vector<unsigned char> CreatePayload_IssuanceVariable(uint8_t ecosystem, uin
 std::vector<unsigned char> CreatePayload_IssuanceManaged(uint8_t ecosystem, uint16_t propertyType, uint32_t previousPropertyId, std::string category,
                                                        std::string subcategory, std::string name, std::string url, std::string data);
 std::vector<unsigned char> CreatePayload_CloseCrowdsale(uint32_t propertyId);
-std::vector<unsigned char> CreatePayload_Grant(uint32_t propertyId, uint64_t amount, std::string memo);
+std::vector<unsigned char> CreatePayload_MintLicense(uint32_t propertyId, uint64_t amount, std::string memo);
 std::vector<unsigned char> CreatePayload_Revoke(uint32_t propertyId, uint64_t amount, std::string memo);
 std::vector<unsigned char> CreatePayload_ChangeIssuer(uint32_t propertyId);
 std::vector<unsigned char> CreatePayload_MetaDExTrade(uint32_t propertyIdForSale, uint64_t amountForSale, uint32_t propertyIdDesired, uint64_t amountDesired);

@@ -4,6 +4,7 @@
 
 #include "omnicore/activation.h"
 #include "omnicore/convert.h"
+#include "omnicore/createpayload.h"
 #include "omnicore/dex.h"
 #include "omnicore/log.h"
 #include "omnicore/mdex.h"
@@ -17,6 +18,7 @@
 #include "amount.h"
 #include "main.h"
 #include "sync.h"
+#include "base58.h"
 #include "utiltime.h"
 
 #include <boost/algorithm/string.hpp>
@@ -37,6 +39,17 @@ using namespace mastercore;
 std::string mastercore::strTransactionType(uint16_t txType)
 {
     switch (txType) {
+        /* gcoin specific*/
+        case GCOIN_TYPE_TEST_CLASS_B: return "Gcoin Test Class B";
+        case GCOIN_TYPE_TEST_CLASS_C: return "Gcoin Test Class C";
+        case GCOIN_TYPE_VOTE_FOR_LICENSE: return "Gcoin Vote For License";
+        case GCOIN_TYPE_VOTE_FOR_ALLIANCE: return "Gcoin Vote For Alliance";
+        case GCOIN_TYPE_APPLY_ALLIANCE: return "Gcoin Apply Alliance";
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND: return "Gcoin Apply License and fund";
+        case GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND: return "Gcoin Vote For License and fund";
+        case GCOIN_TYPE_RECORD_LICENSE_AND_FUND: return "Gcoin record license and fund";
+
+        /* original omni */
         case MSC_TYPE_SIMPLE_SEND: return "Simple Send";
         case MSC_TYPE_RESTRICTED_SEND: return "Restricted Send";
         case MSC_TYPE_SEND_TO_OWNERS: return "Send To Owners";
@@ -82,6 +95,7 @@ static std::string intToClass(int encodingClass)
     return "-";
 }
 
+
 /** Checks whether a pointer to the payload is past it's last position. */
 bool CMPTransaction::isOverrun(const char* p)
 {
@@ -100,6 +114,30 @@ bool CMPTransaction::interpret_Transaction()
     }
 
     switch (type) {
+        case GCOIN_TYPE_TEST_CLASS_C:
+            return interpret_Test();
+
+        case GCOIN_TYPE_TEST_CLASS_B:
+            return interpret_Test();
+
+        case GCOIN_TYPE_VOTE_FOR_LICENSE:
+            return interpret_VoteForLicense();
+
+        case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
+            return interpret_VoteForAlliance();
+
+        case GCOIN_TYPE_APPLY_ALLIANCE:
+            return interpret_ApplyAlliance();
+
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND:
+            return interpret_ApplyLicenseAndFund();
+
+        case GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND:
+            return interpret_VoteForLicenseAndFund();
+
+        case GCOIN_TYPE_RECORD_LICENSE_AND_FUND:
+            return interpret_RecordLicenseAndFund();
+
         case MSC_TYPE_SIMPLE_SEND:
             return interpret_SimpleSend();
 
@@ -179,8 +217,12 @@ bool CMPTransaction::interpret_TransactionType()
         PrintToLog("\t            type: %d (%s)\n", txType, strTransactionType(txType));
     }
 
+    printf("\t------------------------------\n");
+    printf("\t         version: %d, class %s\n", txVersion, intToClass(encodingClass).c_str());
+    printf("\t            type: %d (%s)\n", txType, strTransactionType(txType).c_str());
     return true;
 }
+
 
 /** Tx 1 */
 bool CMPTransaction::interpret_SimpleSend()
@@ -526,13 +568,18 @@ bool CMPTransaction::interpret_CreatePropertyManaged()
     if (pkt_size < 17) {
         return false;
     }
-    const char* p = 11 + (char*) &pkt;
+    const char* p = 13 + (char*) &pkt;
     std::vector<std::string> spstr;
     memcpy(&ecosystem, &pkt[4], 1);
     memcpy(&prop_type, &pkt[5], 2);
     swapByteOrder16(prop_type);
     memcpy(&prev_prop_id, &pkt[7], 4);
     swapByteOrder32(prev_prop_id);
+
+    // Get approve_threshold
+    memcpy(&approve_threshold, &pkt[11], 2);
+    swapByteOrder16(approve_threshold);
+
     for (int i = 0; i < 5; i++) {
         spstr.push_back(std::string(p));
         p += spstr.back().size() + 1;
@@ -548,6 +595,7 @@ bool CMPTransaction::interpret_CreatePropertyManaged()
         PrintToLog("\t       ecosystem: %d\n", ecosystem);
         PrintToLog("\t   property type: %d (%s)\n", prop_type, strPropertyType(prop_type));
         PrintToLog("\tprev property id: %d\n", prev_prop_id);
+        PrintToLog("\tapprove threshold: %d\n", approve_threshold);
         PrintToLog("\t        category: %s\n", category);
         PrintToLog("\t     subcategory: %s\n", subcategory);
         PrintToLog("\t            name: %s\n", name);
@@ -615,6 +663,180 @@ bool CMPTransaction::interpret_ChangeIssuer()
     if ((!rpcOnly && msc_debug_packets) || msc_debug_packets_readonly) {
         PrintToLog("\t        property: %d (%s)\n", property, strMPProperty(property));
     }
+
+    return true;
+}
+
+/** Tx 101 and 102*/
+bool CMPTransaction::interpret_Test() {
+    char* p = 4 + (char*) &pkt;
+    std::string data(p);
+    memset(test_data, 0, sizeof(test_data));
+    PrintToConsole("data length: %d, data: %s\n", data.length(), data.c_str());
+    memcpy(test_data, data.c_str(), data.length());
+    PrintToConsole("test data: %s\n", test_data);
+
+    return true;
+}
+
+/** Tx 400 */
+bool CMPTransaction::interpret_ApplyAlliance() {
+    // Get approve_threshold
+    memcpy(&approve_threshold, &pkt[4], 2);
+    swapByteOrder16(approve_threshold);
+
+    const char* p = 6 + (char*) &pkt;
+    std::vector<std::string> spstr;
+    for (int i = 0; i < 3; i++) {
+        spstr.push_back(std::string(p));
+        p += spstr.back().size() + 1;
+    }
+    int i = 0;
+    memset(alliance_name, 0, sizeof(alliance_name));
+    memset(alliance_url, 0, sizeof(alliance_url));
+    memset(alliance_data, 0, sizeof(alliance_data));
+    memcpy(alliance_name, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_name)-1)); i++;
+    memcpy(alliance_url, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_url)-1)); i++;
+    memcpy(alliance_data, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(alliance_data)-1)); i++;
+
+    if ((!rpcOnly && msc_debug_packets) || msc_debug_packets_readonly) {
+        PrintToLog("\t   approve_threshold: %d\n", approve_threshold);
+        PrintToLog("\t   Alliance name: %s\n", alliance_name);
+        PrintToLog("\t    Alliance url: %s\n", alliance_url);
+        PrintToLog("\t   Alliance data: %s\n", alliance_data);
+    }
+
+    if (isOverrun(p)) {
+        PrintToLog("%s(): rejected: malformed string value(s)\n", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+/** Tx 401 */
+bool CMPTransaction::interpret_ApplyLicenseAndFund() {
+    if (pkt_size < 21) {
+        return false;
+    }
+    const char* p = 17 + (char*) &pkt;
+    std::vector<std::string> spstr;
+    memcpy(&ecosystem, &pkt[4], 1);
+    memcpy(&prop_type, &pkt[5], 2);
+    swapByteOrder16(prop_type);
+    memcpy(&prev_prop_id, &pkt[7], 4);
+    swapByteOrder32(prev_prop_id);
+
+    // Get approve_threshold
+    memcpy(&approve_threshold, &pkt[11], 2);
+    swapByteOrder16(approve_threshold);
+
+    memcpy(&money_application, &pkt[13], 4);
+    swapByteOrder32(money_application);
+
+    for (int i = 0; i < 5; i++) {
+        spstr.push_back(std::string(p));
+        p += spstr.back().size() + 1;
+    }
+    int i = 0;
+    memcpy(category, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(category)-1)); i++;
+    memcpy(subcategory, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(subcategory)-1)); i++;
+    memcpy(name, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(name)-1)); i++;
+    memcpy(url, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(url)-1)); i++;
+    memcpy(data, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(data)-1)); i++;
+
+    if ((!rpcOnly && msc_debug_packets) || msc_debug_packets_readonly) {
+        PrintToLog("\t       ecosystem: %d\n", ecosystem);
+        PrintToLog("\t   property type: %d (%s)\n", prop_type, strPropertyType(prop_type));
+        PrintToLog("\tprev property id: %d\n", prev_prop_id);
+        PrintToLog("\tapprove threshold: %d\n", approve_threshold);
+        PrintToLog("\tmoney application: %d\n", money_application);
+        PrintToLog("\t        category: %s\n", category);
+        PrintToLog("\t     subcategory: %s\n", subcategory);
+        PrintToLog("\t            name: %s\n", name);
+        PrintToLog("\t             url: %s\n", url);
+        PrintToLog("\t            data: %s\n", data);
+    }
+
+    if (isOverrun(p)) {
+        PrintToLog("%s(): rejected: malformed string value(s)\n", __func__);
+        return false;
+    }
+
+    return true;
+}
+
+/** Tx 500 */
+bool CMPTransaction::interpret_VoteForLicense() {
+
+    memcpy(&property, &pkt[4], 4);
+    swapByteOrder32(property);
+
+    PrintToConsole("%s(): property %d\n", __func__, property);
+    PrintToLog("%s(): property %d\n", __func__, property);
+
+    char *p = 8 + (char*) &pkt;
+    std::string tmp(p);
+    memset(voteType, 0, sizeof(voteType));
+    memcpy(voteType, tmp.c_str(), tmp.length());
+    PrintToConsole("%s(): voteType is %s\n", __func__, voteType);
+    PrintToLog("%s(): voteType is %s\n", __func__, voteType);
+
+    return true;
+}
+
+/* Tx 501 */
+bool CMPTransaction::interpret_VoteForAlliance() {
+    char *p = 4 + (char*) &pkt;
+    std::string tmp(p);
+    memset(voteType, 0, sizeof(voteType));
+    memcpy(voteType, tmp.c_str(), tmp.length());
+    PrintToConsole("%s(): voted addr: %s, voteType is %s\n", __func__, receiver, voteType);
+    PrintToLog("%s(): voted addr: %s, voteType is %s\n", __func__, receiver, voteType);
+
+    return true;
+}
+
+/** Tx 502 */
+bool CMPTransaction::interpret_VoteForLicenseAndFund() {
+
+    memcpy(&property, &pkt[4], 4);
+    swapByteOrder32(property);
+    PrintToConsole("%s(): property %d\n", __func__, property);
+    PrintToLog("%s(): property %d\n", __func__, property);
+
+    char *p = 8 + (char*) &pkt;
+    std::vector<std::string> spstr;
+    for (int i = 0; i <= 2; i++) {
+        spstr.push_back(std::string(p));
+        p += spstr.back().size() + 1;
+    }
+
+    // std::string tmp(p);
+    int i = 0;
+    memset(voteType, 0, sizeof(voteType));
+    memcpy(voteType, spstr[i].c_str(), spstr[i].length()); i++;
+    PrintToConsole("%s(): voteType is %s\n", __func__, voteType);
+    PrintToLog("%s(): voteType is %s\n", __func__, voteType);
+
+    memset(vote_data, 0, sizeof(vote_data));
+    memcpy(vote_data, spstr[i].c_str(), std::min(spstr[i].length(), sizeof(vote_data)-1)); i++;
+    PrintToConsole("%s(): vote_data is %s\n", __func__, vote_data);
+    PrintToLog("%s(): vote_data is %s\n", __func__, vote_data);
+
+    return true;
+}
+
+/** Tx 503 */
+bool CMPTransaction::interpret_RecordLicenseAndFund() {
+
+    memcpy(&property, &pkt[4], 4);
+    swapByteOrder32(property);
+    memcpy(&money_application, &pkt[8], 4);
+    swapByteOrder32(money_application);
+
+    PrintToConsole("%s(): property: %d, money_application: %d\n", __func__, property, money_application);
+    PrintToLog("%s(): property: %d, money_application: %d\n", __func__, property, money_application);
 
     return true;
 }
@@ -693,6 +915,24 @@ int CMPTransaction::interpretPacket()
     LOCK(cs_tally);
 
     switch (type) {
+        case GCOIN_TYPE_VOTE_FOR_LICENSE:
+            return logicMath_VoteForLicense();
+
+        case GCOIN_TYPE_VOTE_FOR_ALLIANCE:
+            return logicMath_VoteForAlliance();
+
+        case GCOIN_TYPE_APPLY_ALLIANCE:
+            return logicMath_ApplyAlliance();
+
+        case GCOIN_TYPE_APPLY_LICENSE_AND_FUND:
+            return logicMath_ApplyLicenseAndFund();
+
+        case GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND:
+            return logicMath_VoteForLicenseAndFund();
+
+        case GCOIN_TYPE_RECORD_LICENSE_AND_FUND:
+            return logicMath_RecordLicenseAndFund();
+
         case MSC_TYPE_SIMPLE_SEND:
             return logicMath_SimpleSend();
 
@@ -1217,10 +1457,13 @@ int CMPTransaction::logicMath_MetaDExTrade()
         return (PKT_ERROR_METADEX -34);
     }
 
-    if ((property != OMNI_PROPERTY_MSC) && (desired_property != OMNI_PROPERTY_MSC) &&
-        (property != OMNI_PROPERTY_TMSC) && (desired_property != OMNI_PROPERTY_TMSC)) {
-        PrintToLog("%s(): rejected: one side of a trade [%d, %d] must be OMNI or TOMNI\n", __func__, property, desired_property);
-        return (PKT_ERROR_METADEX -35);
+    if (!IsFeatureActivated(FEATURE_TRADEALLPAIRS, block)) {
+        // Trading non-Omni pairs is not allowed before trading all pairs is activated
+        if ((property != OMNI_PROPERTY_MSC) && (desired_property != OMNI_PROPERTY_MSC) &&
+            (property != OMNI_PROPERTY_TMSC) && (desired_property != OMNI_PROPERTY_TMSC)) {
+            PrintToLog("%s(): rejected: one side of a trade [%d, %d] must be OMNI or TOMNI\n", __func__, property, desired_property);
+            return (PKT_ERROR_METADEX -35);
+        }
     }
 
     int64_t nBalance = getMPbalance(sender, property, BALANCE);
@@ -1658,7 +1901,11 @@ int CMPTransaction::logicMath_CreatePropertyManaged()
     newSP.manual = true;
     newSP.creation_block = blockHash;
     newSP.update_block = newSP.creation_block;
-
+    newSP.approve_threshold = approve_threshold;
+    newSP.approve_count = 0;
+    newSP.reject_count = 0;
+    newSP.money_application = 0;
+    newSP.money_application_txid = "";
     uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
     assert(propertyId > 0);
 
@@ -1708,6 +1955,12 @@ int CMPTransaction::logicMath_GrantTokens()
     if (!sp.manual) {
         PrintToLog("%s(): rejected: property %d is not managed\n", __func__, property);
         return (PKT_ERROR_TOKENS -42);
+    }
+
+    // Check license approve or not
+    if (sp.approve_count < sp.approve_threshold) {
+        PrintToLog("%s(): rejected: approve_count[=%d] not reach approve_threshold[=%d]\n", __func__, sp.approve_count, sp.approve_threshold);
+        return 0;
     }
 
     if (sender != sp.issuer) {
@@ -1888,6 +2141,453 @@ int CMPTransaction::logicMath_ChangeIssuer()
     return 0;
 }
 
+/** Tx 400 */
+int CMPTransaction::logicMath_ApplyAlliance() {
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    if (allianceInfoDB->hasAllianceInfo(sender)) {
+        PrintToLog("%s(): ERROR: Address %s has already apply for alliance\n", __func__, sender);
+        PrintToConsole("%s(): ERROR: Address %s has already apply for alliance\n", __func__, sender);
+        return false;
+    }
+
+    // ------------------------------------------
+
+    PrintToLog("%s(): Address %s apply for alliance\n", __func__, sender);
+    PrintToConsole("%s(): Address %s apply for alliance\n", __func__, sender);
+    AllianceInfo::Entry allianceEntry = allianceInfoDB->allianceInfoEntryBuilder(
+        sender,
+        alliance_name,
+        alliance_url,
+        approve_threshold,
+        alliance_data, 
+        txid,
+        blockHash);
+    assert(allianceInfoDB->putAllianceInfo(sender, allianceEntry));
+
+    return 0;
+}
+
+/** Tx 401 */
+int CMPTransaction::logicMath_ApplyLicenseAndFund() {
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    if (OMNI_PROPERTY_MSC != ecosystem && OMNI_PROPERTY_TMSC != ecosystem) {
+        PrintToLog("%s(): rejected: invalid ecosystem: %d\n", __func__, (uint32_t) ecosystem);
+        return (PKT_ERROR_SP -21);
+    }
+
+    if (MSC_PROPERTY_TYPE_INDIVISIBLE != prop_type && MSC_PROPERTY_TYPE_DIVISIBLE != prop_type) {
+        PrintToLog("%s(): rejected: invalid property type: %d\n", __func__, prop_type);
+        return (PKT_ERROR_SP -36);
+    }
+
+    if ('\0' == name[0]) {
+        PrintToLog("%s(): rejected: property name must not be empty\n", __func__);
+        return (PKT_ERROR_SP -37);
+    }
+
+    // ------------------------------------------
+
+    CMPSPInfo::Entry newSP;
+    newSP.issuer = sender;
+    newSP.txid = txid;
+    newSP.prop_type = prop_type;
+    newSP.category.assign(category);
+    newSP.subcategory.assign(subcategory);
+    newSP.name.assign(name);
+    newSP.url.assign(url);
+    newSP.data.assign(data);
+    newSP.fixed = false;
+    newSP.manual = true;
+    newSP.creation_block = blockHash;
+    newSP.update_block = newSP.creation_block;
+    newSP.approve_threshold = approve_threshold;
+    newSP.approve_count = 0;
+    newSP.reject_count = 0;
+    newSP.money_application = money_application;
+    newSP.money_application_txid = "";
+
+    uint32_t propertyId = _my_sps->putSP(ecosystem, newSP);
+    assert(propertyId > 0);
+
+    PrintToLog("CREATED MANUAL PROPERTY id: %d admin: %s\n", propertyId, sender);
+
+    return 0;
+}
+
+/** Tx 500 */
+int CMPTransaction::logicMath_VoteForLicense() {
+    printf("%s(): property %u\n", __func__, property);
+    PrintToLog("%s(): property %u\n", __func__, property);
+
+    if (OMNI_PROPERTY_MSC == property || 
+        OMNI_PROPERTY_TMSC == property ||
+        GCOIN_TOKEN == property) {
+        return false;
+    }
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare sender with Alliance
+    if (!allianceInfoDB->isAllianceApproved(sender)) {
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
+    // compare property id
+    if (!_my_sps->hasSP(property)) {
+        PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
+        return (PKT_ERROR_TOKENS -24);
+    }
+
+    CMPSPInfo::Entry sp;
+    assert(_my_sps->getSP(property, sp));
+
+    if (sp.money_application != 0) {
+        PrintToConsole("%s(): rejected: property %d is applied with fund %d, please use RPC:gcoin_vote_for_license_and_fund\n", __func__, property, sp.money_application);
+        PrintToLog("%s(): rejected: property %d is applied with fund %d, please use RPC:gcoin_vote_for_license_and_fund\n", __func__, property, sp.money_application);
+        return false;
+    }
+
+    // Prepare property id string
+    std::string propertyIdString;
+
+    char tmp[20];
+    snprintf(tmp, sizeof(tmp), "%u", property);
+    propertyIdString.append(tmp);
+
+    std::string voteTypeString(voteType);
+    uint32_t weightedVote = 1;
+    if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+        weightedVote = (uint32_t) getMPbalance(sender, GCOIN_TOKEN, BALANCE);
+    } 
+    // If this is a new vote
+    if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
+        // compare 'voteType': approve or reject
+        // and set the approve_count and reject_count
+        if (strcmp(voteType, "approve") == 0) {
+            sp.approve_count += weightedVote;
+            PrintToLog("%s(): Vote for approve\n", __func__);
+            PrintToConsole("%s(): Vote for approve\n", __func__);
+        }
+        else if (strcmp(voteType, "reject") == 0) {
+            sp.reject_count += weightedVote;
+            PrintToLog("%s(): Vote for reject\n", __func__);
+            PrintToConsole("%s(): Vote for reject\n", __func__);
+        }
+
+    } else { // If this is a dupilcate vote
+        PrintToLog("This alliance %s has already voted for the property: %d.\n", sender, property);
+        PrintToConsole("This alliance %s has already voted for the property: %d.\n", sender, property);
+        return false;
+    }
+    
+    // Store/update this vote into db
+    voteRecordDB->putVoteRecord(sender, 54, propertyIdString, voteTypeString);
+
+    // Save Updated SP to DB
+    assert(_my_sps->updateSP(property, sp));
+    PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
+    PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
+
+    return 0;
+}
+
+/* Tx 501 */
+int CMPTransaction::logicMath_VoteForAlliance() {
+    PrintToConsole("%s(): sender: %s, receiver: %s\n", __func__, sender, receiver);
+    PrintToLog("%s(): sender: %s, receiver: %s\n", __func__, sender, receiver);
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare sender with Alliance
+    if (!allianceInfoDB->isAllianceApproved(sender)) {
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        PrintToConsole("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
+    // compare voted address 
+    if (!allianceInfoDB->hasAllianceInfo(receiver)) {
+        PrintToLog("%s(): rejected: voted address %s does not exist\n", __func__, receiver);
+        PrintToConsole("%s(): rejected: voted address %s does not exist\n", __func__, receiver);
+        return false;
+    }
+
+
+    AllianceInfo::Entry votedAllianceInfo;
+    assert(allianceInfoDB->getAllianceInfo(receiver, votedAllianceInfo));
+
+    std::string voteTypeString(voteType);
+    uint32_t weightedVote = 1;
+    if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+        weightedVote = (uint32_t) getMPbalance(sender, GCOIN_TOKEN, BALANCE);
+    }
+    // If this is a new vote
+    if (!voteRecordDB->hasVoteRecord(sender, 400, receiver)) {
+        // compare 'voteType': approve or reject
+        // and set the approve_count and reject_count
+        if (strcmp(voteType, "approve") == 0) {
+            votedAllianceInfo.approve_count += weightedVote;
+            PrintToLog("%s(): Vote for approve\n", __func__);
+            PrintToConsole("%s(): Vote for approve\n", __func__);
+        }
+        else if (strcmp(voteType, "reject") == 0) {
+            votedAllianceInfo.reject_count += weightedVote;
+            PrintToLog("%s(): Vote for reject\n", __func__);
+            PrintToConsole("%s(): Vote for reject\n", __func__);
+        }
+    } else { // If this is a dupilcate vote
+        PrintToLog("This alliance %s has already voted for this appliance(%s).\n", sender, receiver);
+        PrintToConsole("This alliance %s has already voted for this appliance(%s).\n", sender, receiver);
+        return false;
+    }
+
+    /* TODO: may have to deal with rejected situation. */
+    if (votedAllianceInfo.approve_count >= votedAllianceInfo.approve_threshold) {
+        votedAllianceInfo.status = AllianceInfo::ALLIANCE_INFO_STATUS_APPROVED;
+    } else {
+        votedAllianceInfo.status = AllianceInfo::ALLIANCE_INFO_STATUS_PENDING;
+    }
+
+    // Store/update this vote into db
+    voteRecordDB->putVoteRecord(sender, 400, receiver, voteTypeString);
+
+    // Save Updated alliance info to DB
+    assert(allianceInfoDB->updateAllianceInfo(receiver, votedAllianceInfo));
+
+    PrintToLog("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
+    PrintToConsole("%s(): alliance address %s approve count: %d \n", __func__, receiver, votedAllianceInfo.approve_count);
+    PrintToLog("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);
+    PrintToConsole("%s(): alliance address %s reject count: %d \n", __func__, receiver, votedAllianceInfo.reject_count);
+
+    return 0;
+}
+
+/** Tx 502 */
+int CMPTransaction::logicMath_VoteForLicenseAndFund() {
+    printf("%s(): property %u\n", __func__, property);
+    PrintToLog("%s(): property %u\n", __func__, property);
+
+    if (OMNI_PROPERTY_MSC == property || 
+        OMNI_PROPERTY_TMSC == property ||
+        GCOIN_TOKEN == property) {
+        return false;
+    }
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare sender with Alliance
+    if (!allianceInfoDB->isAllianceApproved(sender)) {
+        PrintToConsole("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        PrintToLog("%s(): ERROR: sender %s is not alliance\n", __func__, sender);
+        return false;
+    }
+
+    // compare property id
+    if (!_my_sps->hasSP(property)) {
+        PrintToConsole("%s(): rejected: property %d does not exist\n", __func__, property);
+        PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
+        return (PKT_ERROR_TOKENS -24);
+    }
+
+    CMPSPInfo::Entry sp;
+    assert(_my_sps->getSP(property, sp));
+
+    if (sp.money_application == 0) {
+        PrintToConsole("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
+        PrintToLog("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
+        return false;
+    }
+
+    // Prepare property id string
+    std::string propertyIdString;
+    std::string issuer = sp.issuer;
+
+    char tmp[20];
+    snprintf(tmp, sizeof(tmp), "%u", property);
+    propertyIdString.append(tmp);
+
+    std::string voteTypeString(voteType);
+    uint32_t weightedVote = 1;
+    if (GCOIN_USE_WEIGHTED_ALLIANCE) {
+        weightedVote = (uint32_t) getMPbalance(sender, GCOIN_TOKEN, BALANCE);
+    }
+    // If this is a new vote
+    if (!voteRecordDB->hasVoteRecord(sender, 54, propertyIdString)) {
+        // compare 'voteType': approve or reject
+        // and set the approve_count and reject_count
+        if (strcmp(voteType, "approve") == 0) {
+            sp.approve_count += weightedVote;
+            PrintToLog("%s(): Vote for approve\n", __func__);
+            PrintToConsole("%s(): Vote for approve\n", __func__);
+        }
+        else if (strcmp(voteType, "reject") == 0) {
+            sp.reject_count += weightedVote;
+            PrintToLog("%s(): Vote for reject\n", __func__);
+            PrintToConsole("%s(): Vote for reject\n", __func__);
+        }
+
+    } else { // If this is a dupilcate vote
+        PrintToLog("This alliance %s has already voted for the property: %d.\n", sender, property);
+        PrintToConsole("This alliance %s has already voted for the property: %d.\n", sender, property);
+        return false;
+    }
+
+    // TODO: may have to deal with rejected situation. 
+    if (sp.approve_count >= sp.approve_threshold) {
+        // Request the wallet build the transaction (and if needed commit it)
+        // TODO: may have to check if exodus is belonged to this wallet here. 
+        PrintToConsole("issuer: %s, property: %s\n", issuer, property);
+        if (!btcTxRecordDB->hasBTCTxRecord(issuer, property)) {
+            uint256 txid;
+            // TODO: replace real amount here. 
+            PrintToConsole("\n***********send to address: %s, amount: %u\n", issuer, sp.money_application);
+            std::string rawHex;
+            std::vector<unsigned char> payload = CreatePayload_RecordLicenseAndFund(property, sp.money_application);
+            int result = ClassAgnosticWalletTXBuilder(ExodusAddress().ToString(), issuer, "", sp.money_application, payload, txid, rawHex, true);
+
+            if (result != 0) {
+                PrintToLog("Send to address error while license approved. Maybe you are not exodus owner. Error code: %d\n", result);
+                PrintToConsole("Send to address error while license approved. Maybe you are not exodus owner. Error code: %d\n", result);
+            } else {
+                PrintToLog("Send to address success. txid: %s\n", txid.GetHex());
+                PrintToConsole("Send to address success. txid: %s\n", txid.GetHex());
+                btcTxRecordDB->putBTCTxRecord(issuer, property, txid.GetHex());
+            }
+        } else {
+            std::string txidStr;
+            btcTxRecordDB->getBTCTxRecord(issuer, property, txidStr);
+            PrintToConsole("Already paid for this apply, txid: %s\n", txidStr);
+            PrintToLog("Already paid for this apply, txid: %s\n", txidStr);
+        }
+    }  
+    
+    // Store/update this vote into db
+    voteRecordDB->putVoteRecord(sender, 54, propertyIdString, voteTypeString);
+
+    // Save Updated SP to DB
+    assert(_my_sps->updateSP(property, sp));
+    PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
+    PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
+
+    return 0;
+}
+
+
+/** Tx 503 */
+int CMPTransaction::logicMath_RecordLicenseAndFund() {
+    PrintToConsole("%s(): property %u\n", __func__, property);
+    PrintToLog("%s(): property %u\n", __func__, property);
+
+    if (OMNI_PROPERTY_MSC == property || 
+        OMNI_PROPERTY_TMSC == property ||
+        GCOIN_TOKEN == property) {
+        return false;
+    }
+
+    uint256 blockHash;
+    {
+        LOCK(cs_main);
+
+        CBlockIndex* pindex = chainActive[block];
+        if (pindex == NULL) {
+            PrintToLog("%s(): ERROR: block %d not in the active chain\n", __func__, block);
+            return (PKT_ERROR_SP -20);
+        }
+        blockHash = pindex->GetBlockHash();
+    }
+
+    // compare sender with Alliance
+    if (sender != ExodusAddress().ToString()) {
+        PrintToConsole("%s(): ERROR: sender %s is not exodus\n", __func__, sender);
+        PrintToLog("%s(): ERROR: sender %s is not exodus\n", __func__, sender);
+        return false;
+    }
+
+    // compare property id
+    if (!_my_sps->hasSP(property)) {
+        PrintToConsole("%s(): rejected: property %d does not exist\n", __func__, property);
+        PrintToLog("%s(): rejected: property %d does not exist\n", __func__, property);
+        return (PKT_ERROR_TOKENS -24);
+    }
+
+    CMPSPInfo::Entry sp;
+    assert(_my_sps->getSP(property, sp));
+
+    if (sp.money_application == 0) {
+        PrintToConsole("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
+        PrintToLog("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
+        return false;
+    }
+
+    if (!(sp.issuer == receiver)) {
+        PrintToConsole("%s(): rejected: this receiver: %s did not apply for this fund.\n", __func__, receiver);
+        PrintToLog("%s(): rejected: property %d is not applied with fund, please use RPC:gcoin_vote_for_license\n", __func__, property);
+        return false;
+    }
+    
+    sp.money_application_txid = txid.GetHex();
+
+    // Save Updated SP to DB
+    assert(_my_sps->updateSP(property, sp));
+    PrintToLog("%s(): property %d approve count: %d \n", __func__, property, sp.approve_count);
+    PrintToLog("%s(): property %d reject count: %d \n", __func__, property, sp.reject_count);
+
+    return 0;
+}
+
 /** Tx 65534 */
 int CMPTransaction::logicMath_Activation()
 {
@@ -1958,4 +2658,3 @@ int CMPTransaction::logicMath_Alert()
 
     return 0;
 }
-

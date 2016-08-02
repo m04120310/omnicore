@@ -163,7 +163,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "omni_senddexaccept", 2 },
     { "omni_senddexaccept", 4 },
     { "omni_sendclosecrowdsale", 1 },
-    { "omni_sendgrant", 2 },
     { "omni_sendrevoke", 1 },
     { "omni_sendchangeissuer", 2 },
     { "omni_sendactivation", 1 },
@@ -213,6 +212,23 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "omni_createpayload_canceltradesbypair", 0 },
     { "omni_createpayload_canceltradesbypair", 1 },
     { "omni_createpayload_cancelalltrades", 0 },
+
+    /* Gcoin test tx */
+    { "test_class_b", 3 },
+    { "test_class_c", 3 },
+    { "test_multisig_tx", 15},
+    { "gcoin_vote_for_license", 1},
+    { "gcoin_vote_for_alliance", 3},
+    { "gcoin_mint_license", 2 },
+    { "gcoin_get_alliance_info_list", 0},
+    { "gcoin_apply_alliance", 4},
+    { "gcoin_get_alliacne_info_by_address", 1},
+    { "gcoin_apply_license_and_fund", 1},
+    { "gcoin_apply_license_and_fund", 2},
+    { "gcoin_apply_license_and_fund", 3},
+    { "gcoin_apply_license_and_fund", 9},
+    { "gcoin_vote_for_license_and_fund", 1},
+    { "send_from_address", 3},
 };
 
 class CRPCConvertTable
@@ -245,7 +261,6 @@ static CRPCConvertTable rpcCvtTable;
 Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)
 {
     Array params;
-
     for (unsigned int idx = 0; idx < strParams.size(); idx++) {
         const std::string& strVal = strParams[idx];
 

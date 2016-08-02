@@ -74,14 +74,38 @@ void PopulateFailure(int error)
     throw JSONRPCError(RPC_INTERNAL_ERROR, "Generic transaction population failure");
 }
 
+void AllianceToJSON(AllianceInfo::Entry& entry, Object& alliance_obj) {
+    alliance_obj.push_back(Pair("address", entry.address));
+    alliance_obj.push_back(Pair("name", entry.name));
+    alliance_obj.push_back(Pair("data", entry.data));
+    alliance_obj.push_back(Pair("url", entry.url));
+    alliance_obj.push_back(Pair("status", entry.getStatusString()));
+    int64_t balance = getMPbalance(entry.address, GCOIN_TOKEN, BALANCE);
+    alliance_obj.push_back(Pair("GCOIN token", balance));
+}
+
 void PropertyToJSON(const CMPSPInfo::Entry& sProperty, Object& property_obj)
 {
     property_obj.push_back(Pair("name", sProperty.name));
+    property_obj.push_back(Pair("issuer", sProperty.issuer));
     property_obj.push_back(Pair("category", sProperty.category));
+    property_obj.push_back(Pair("num_tokens", sProperty.num_tokens));
     property_obj.push_back(Pair("subcategory", sProperty.subcategory));
     property_obj.push_back(Pair("data", sProperty.data));
     property_obj.push_back(Pair("url", sProperty.url));
     property_obj.push_back(Pair("divisible", sProperty.isDivisible()));
+    property_obj.push_back(Pair("approve threshold", (uint16_t) sProperty.approve_threshold));
+    property_obj.push_back(Pair("approve count", (uint16_t) sProperty.approve_count));
+    
+    if (sProperty.approve_count >= sProperty.approve_threshold) {
+        property_obj.push_back(Pair("isValid", "True"));
+    } else {
+        property_obj.push_back(Pair("isValid", "False"));
+    }
+
+    property_obj.push_back(Pair("money application", (int) sProperty.money_application));
+    property_obj.push_back(Pair("btc txid", sProperty.money_application_txid));
+
 }
 
 void MetaDexObjectToJSON(const CMPMetaDEx& obj, Object& metadex_obj)
@@ -143,6 +167,40 @@ bool BalanceToJSON(const std::string& address, uint32_t property, Object& balanc
     } else {
         return true;
     }
+}
+
+// Show alliance list
+Value gcoin_get_alliance_info_list(const Array& params, bool fHelp) {
+    if (fHelp)
+        throw runtime_error("Show all alliance info.\n");
+    std::vector<AllianceInfo::Entry> infoVec;
+    allianceInfoDB->getAllAllianceInfo(infoVec);
+
+    Array response;
+    for (unsigned int i = 0; i < infoVec.size(); i++) {
+        AllianceInfo::Entry info = infoVec[i];
+        Object allianceObj;
+        AllianceToJSON(info, allianceObj);
+        response.push_back(allianceObj);
+    }
+
+    return response;
+}
+
+// Show alliance info by address
+Value gcoin_get_alliacne_info_by_address(const Array& params, bool fHelp) {
+    if (fHelp || params.size() != 1)
+        throw runtime_error("Example: ./omnicore -testnet gcoin_get_alliacne_info_by_address <address>\n");
+    Array response;
+    std::string address = ParseAddress(params[0]);
+
+    AllianceInfo::Entry info;
+    Object allianceObj;
+    if(allianceInfoDB->getAllianceInfo(address, info)) {
+        AllianceToJSON(info, allianceObj);
+        response.push_back(allianceObj);
+        return response;
+    } else return "Given address is not a member of alliance.";
 }
 
 // generate a list of seed blocks based on the data in LevelDB
@@ -654,6 +712,7 @@ Value omni_listproperties(const Array& params, bool fHelp)
 
     LOCK(cs_tally);
 
+    // Mainnet
     uint32_t nextSPID = _my_sps->peekNextSPID(1);
     for (uint32_t propertyId = 1; propertyId < nextSPID; propertyId++) {
         CMPSPInfo::Entry sp;
@@ -666,6 +725,7 @@ Value omni_listproperties(const Array& params, bool fHelp)
         }
     }
 
+    // Testnet
     uint32_t nextTestSPID = _my_sps->peekNextSPID(2);
     for (uint32_t propertyId = TEST_ECO_PROPERTY_1; propertyId < nextTestSPID; propertyId++) {
         CMPSPInfo::Entry sp;
@@ -1073,7 +1133,7 @@ Value omni_gettradehistoryforaddress(const Array& params, bool fHelp)
             "    \"propertyiddesired\" : n,                       (number) the identifier of the tokens desired in exchange\n"
             "    \"propertyiddesiredisdivisible\" : true|false,   (boolean) whether the desired tokens are divisible\n"
             "    \"amountdesired\" : \"n.nnnnnnnn\",                (string) the amount of tokens initially desired\n"
-            "    \"unitprice\" : \"n.nnnnnnnnnnn...\"               (string) the unit price nominated in OMNI or TOMNI\n"
+            "    \"unitprice\" : \"n.nnnnnnnnnnn...\"               (string) the unit price (shown in the property desired)\n"
             "    \"status\" : \"status\"                            (string) the status of the order (\"open\", \"cancelled\", \"filled\", ...)\n"
             "    \"canceltxid\" : \"hash\",                         (string) the hash of the transaction that cancelled the order (if cancelled)\n"
             "    \"matches\": [                                   (array of JSON objects) a list of matched orders and executed trades\n"
@@ -1740,7 +1800,7 @@ Value omni_gettrade(const Array& params, bool fHelp)
             "  \"propertyiddesired\" : n,                       (number) the identifier of the tokens desired in exchange\n"
             "  \"propertyiddesiredisdivisible\" : true|false,   (boolean) whether the desired tokens are divisible\n"
             "  \"amountdesired\" : \"n.nnnnnnnn\",                (string) the amount of tokens initially desired\n"
-            "  \"unitprice\" : \"n.nnnnnnnnnnn...\"               (string) the unit price nominated in OMNI or TOMNI\n"
+            "  \"unitprice\" : \"n.nnnnnnnnnnn...\"               (string) the unit price (shown in the property desired)\n"
             "  \"status\" : \"status\"                            (string) the status of the order (\"open\", \"cancelled\", \"filled\", ...)\n"
             "  \"canceltxid\" : \"hash\",                         (string) the hash of the transaction that cancelled the order (if cancelled)\n"
             "  \"matches\": [                                   (array of JSON objects) a list of matched orders and executed trades\n"

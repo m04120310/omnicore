@@ -61,6 +61,12 @@ int const MAX_STATE_HISTORY = 50;
 #define PACKET_SIZE         31
 #define MAX_PACKETS        255
 
+// Gcoin license's threshold percentage(approve vote from alliances)
+#define LICENSE_APPROVE_PERCENTAGE 2.0/3.0
+#define ALLIANCE_APPROVE_PERCENTAGE 2.0/3.0
+#define GCOIN_FEATURE_START_BLOCK_HEIGHT 874710
+#define GCOIN_USE_WEIGHTED_ALLIANCE 1
+
 // Transaction types, from the spec
 enum TransactionType {
   MSC_TYPE_SIMPLE_SEND              =  0,
@@ -87,6 +93,15 @@ enum TransactionType {
   MSC_TYPE_GRANT_PROPERTY_TOKENS    = 55,
   MSC_TYPE_REVOKE_PROPERTY_TOKENS   = 56,
   MSC_TYPE_CHANGE_ISSUER_ADDRESS    = 70,
+  GCOIN_TYPE_TEST_CLASS_C           = 101,
+  GCOIN_TYPE_TEST_CLASS_B           = 102,
+  GCOIN_TYPE_MULTISIG               = 103,
+  GCOIN_TYPE_APPLY_ALLIANCE         = 400,
+  GCOIN_TYPE_APPLY_LICENSE_AND_FUND = 401,
+  GCOIN_TYPE_VOTE_FOR_LICENSE       = 500,
+  GCOIN_TYPE_VOTE_FOR_ALLIANCE      = 501,
+  GCOIN_TYPE_VOTE_FOR_LICENSE_AND_FUND = 502,
+  GCOIN_TYPE_RECORD_LICENSE_AND_FUND = 503,
   OMNICORE_MESSAGE_TYPE_ACTIVATION  = 65534,
   OMNICORE_MESSAGE_TYPE_ALERT       = 65535
 };
@@ -129,6 +144,7 @@ enum FILETYPES {
 #define OMNI_PROPERTY_BTC   0
 #define OMNI_PROPERTY_MSC   1
 #define OMNI_PROPERTY_TMSC  2
+#define GCOIN_TOKEN 3
 
 // forward declarations
 std::string FormatDivisibleMP(int64_t amount, bool fSign = false);
@@ -144,7 +160,7 @@ const CBitcoinAddress ExodusAddress();
 const CBitcoinAddress ExodusCrowdsaleAddress(int nBlock = 0);
 
 /** Returns the marker for class C transactions. */
-const std::vector<unsigned char> GetOmMarker();
+const std::vector<unsigned char> GetGcoinMarker();
 
 //! Used to indicate, whether to automatically commit created transactions
 extern bool autoCommit;
